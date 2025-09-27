@@ -1,14 +1,12 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { kindeClient, sessionManager } from "../kinde";
 
 export const authRoute = new Hono()
-  .get("/login", async (c) => {
-    const loginUrl = await kindeClient.login(sessionManager);
-    return c.redirect(loginUrl.toString());
+  .get("/login", async (c) => {})
+  .get("/register", async (c) => {})
+  .get("/callback", async (c) => {
+    // this will get called whenever I'll login or register
   })
-  .get("/register", async (c) => {
-    const registerUrl = await kindeClient.register(sessionManager);
-    return c.redirect(registerUrl.toString());
-  });
+  .get("/logout", async (c) => {})
+  .get("/me", async (c) => {});
