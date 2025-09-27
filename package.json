@@ -1,0 +1,17 @@
+{
+  "name": "crisp-swipe",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.3",
+    "hono": "^4.9.9",
+    "zod": "^4.1.11"
+  }
+}
