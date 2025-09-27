@@ -1,19 +1,35 @@
 {
   "name": "crisp-swipe",
-  "module": "index.ts",
+  "module": "server/index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "start": "bun server/index.ts",
+    "dev": "bun --watch server/index.ts",
+    "db-push": "bunx drizzle-kit push",
+    "db-generate": "bunx drizzle-kit generate",
+    "db-migrate": "bunx drizzle-kit migrate"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.5",
+    "tsx": "^4.20.6"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.38",
     "@hono/zod-validator": "^0.7.3",
+    "@supermemory/ai-sdk": "^1.0.8",
+    "ai": "^5.0.56",
     "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.2",
+    "drizzle-orm": "^0.44.5",
     "drizzle-zod": "^0.8.3",
     "hono": "^4.9.9",
+    "pg": "^8.16.3",
     "zod": "^4.1.11"
   }
 }
