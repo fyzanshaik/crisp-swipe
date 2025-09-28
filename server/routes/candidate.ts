@@ -922,6 +922,86 @@ const candidateRoute = new Hono()
       answers: evaluationStatus,
       queueStatus: evaluationQueue.getQueueStatus()
     });
+  })
+  .get("/results/:sessionId", async (c) => {
+    const user = c.get('user');
+    const sessionId = c.req.param('sessionId');
+
+    const session = await db.query.interviewSessions.findFirst({
+      where: eq(interviewSessions.id, sessionId),
+      with: {
+        interview: {
+          columns: {
+            id: true,
+            title: true,
+            jobRole: true
+          }
+        },
+        answers: {
+          with: {
+            question: {
+              columns: {
+                id: true,
+                type: true,
+                difficulty: true,
+                questionText: true,
+                points: true
+              }
+            }
+          },
+          orderBy: (answers, { asc }) => [asc(answers.submittedAt)]
+        }
+      }
+    });
+
+    if (!session) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+
+    if (session.userId !== user.userId) {
+      return c.json({ error: "Access denied" }, 403);
+    }
+
+    if (session.status !== 'completed') {
+      return c.json({ error: "Interview not completed yet" }, 400);
+    }
+
+    const unevaluatedCount = session.answers.filter(a => !a.evaluated).length;
+    if (unevaluatedCount > 0) {
+      return c.json({
+        message: "Results are being processed",
+        evaluationProgress: `${session.answers.length - unevaluatedCount}/${session.answers.length}`,
+        estimatedTime: `${unevaluatedCount * 30} seconds`
+      });
+    }
+
+    const results = session.answers.map(answer => ({
+      questionNumber: session.answers.indexOf(answer) + 1,
+      questionType: answer.question?.type,
+      difficulty: answer.question?.difficulty,
+      questionText: answer.question?.questionText,
+      yourAnswer: answer.answerText,
+      score: answer.score,
+      maxPoints: answer.question?.points,
+      feedback: answer.feedback,
+      timeTaken: answer.timeTaken
+    }));
+
+    return c.json({
+      interview: {
+        title: session.interview?.title,
+        jobRole: session.interview?.jobRole
+      },
+      summary: {
+        totalScore: session.finalScore,
+        maxScore: session.maxScore,
+        percentage: session.percentage,
+        completedAt: session.completedAt,
+        aiSummary: session.aiSummary
+      },
+      results,
+      totalQuestions: session.answers.length
+    });
   });
 
 export { candidateRoute };

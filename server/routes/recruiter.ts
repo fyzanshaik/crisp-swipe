@@ -637,4 +637,85 @@ export const recruiterRoute = new Hono()
       isPublic: interview.isPublic,
       assignedEmails: interview.assignedEmails || []
     });
+  })
+  .get("/interviews/:id/results", async (c) => {
+    const user = c.get('user');
+    const interviewId = c.req.param('id');
+
+    const interview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, interviewId),
+      columns: {
+        id: true,
+        title: true,
+        jobRole: true,
+        createdBy: true,
+        createdAt: true
+      },
+      with: {
+        sessions: {
+          where: eq(interviewSessions.status, 'completed'),
+          with: {
+            user: {
+              columns: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            answers: {
+              with: {
+                question: {
+                  columns: {
+                    type: true,
+                    difficulty: true,
+                    points: true
+                  }
+                }
+              }
+            }
+          },
+          orderBy: (sessions, { desc }) => [desc(sessions.completedAt)]
+        }
+      }
+    });
+
+    if (!interview || interview.createdBy !== user.userId) {
+      return c.json({ error: "Interview not found" }, 404);
+    }
+
+    const sessionResults = interview.sessions.map(session => {
+      const allEvaluated = session.answers.every(a => a.evaluated);
+
+      return {
+        sessionId: session.id,
+        candidate: {
+          name: session.user?.name,
+          email: session.user?.email
+        },
+        completedAt: session.completedAt,
+        totalScore: session.finalScore,
+        maxScore: session.maxScore,
+        percentage: session.percentage,
+        aiSummary: session.aiSummary,
+        evaluationComplete: allEvaluated,
+        questionBreakdown: session.answers.map(answer => ({
+          type: answer.question?.type,
+          difficulty: answer.question?.difficulty,
+          score: answer.score,
+          maxPoints: answer.question?.points,
+          evaluated: answer.evaluated
+        }))
+      };
+    });
+
+    return c.json({
+      interview: {
+        id: interview.id,
+        title: interview.title,
+        jobRole: interview.jobRole,
+        createdAt: interview.createdAt
+      },
+      totalSessions: sessionResults.length,
+      results: sessionResults
+    });
   });
