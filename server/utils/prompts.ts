@@ -1,0 +1,56 @@
+export const GENERATE_QUESTIONS_PROMPT = (jobRole: string, technologies: string[], customPrompt?: string) => {
+  const techList = technologies.join(", ");
+  const additionalContext = customPrompt ? `\n\nAdditional requirements: ${customPrompt}` : "";
+
+  return `Generate exactly 6 interview questions for a ${jobRole} position using these technologies: ${techList}
+
+Requirements:
+- 2 Easy MCQ questions (20 seconds each, 10 points each)
+- 2 Medium short answer questions (60 seconds each, 20 points each)
+- 2 Hard coding questions (120 seconds each, 30 points each)
+
+For MCQ questions:
+- Provide exactly 4 options
+- Mark the correct answer clearly
+- Focus on fundamental concepts
+
+For Short Answer questions:
+- Include 5 relevant keywords for evaluation
+- Set word limits: min 30, max 150 words
+- Test conceptual understanding
+
+For Code questions:
+- Provide starter code template
+- Include complete sample solution
+- Add 4 evaluation criteria
+- Choose practical, real-world problems
+
+Make questions progressive in difficulty and relevant to actual job requirements.${additionalContext}
+
+Ensure all questions are technically accurate, appropriate for the role level, practical and job-relevant, clear and unambiguous.`;
+};
+
+export const GENERATE_QUESTIONS_SYSTEM = "You are an expert technical interviewer creating high-quality interview questions. Generate questions that accurately assess candidate skills for the specified role.";
+
+export const REGENERATE_QUESTION_PROMPT = (modificationRequest: string, currentQuestion?: any) => {
+  const currentQuestionContext = currentQuestion ?
+    `\n\nCurrent question to modify:\nType: ${currentQuestion.type}\nDifficulty: ${currentQuestion.difficulty}\nQuestion: ${currentQuestion.questionText}` :
+    "";
+
+  return `Regenerate this interview question based on the modification request.
+
+Modification Request: ${modificationRequest}${currentQuestionContext}
+
+Requirements:
+- Maintain the same question type and difficulty level
+- Apply the requested modifications
+- Ensure technical accuracy
+- Keep the same time limit and point structure
+- For MCQ: provide 4 options with clear correct answer
+- For Short Answer: include 5 relevant keywords, 30-150 word limits
+- For Code: include starter code, sample solution, and 4 evaluation criteria
+
+Generate a single improved question that addresses the modification request.`;
+};
+
+export const REGENERATE_QUESTION_SYSTEM = "You are an expert technical interviewer. Modify the question according to the specific request while maintaining quality and technical accuracy.";

@@ -4,9 +4,16 @@
     "": {
       "name": "crisp-swipe",
       "dependencies": {
+        "@ai-sdk/anthropic": "^2.0.20",
+        "@ai-sdk/cerebras": "^1.0.21",
+        "@ai-sdk/cohere": "^2.0.12",
+        "@ai-sdk/google": "^2.0.17",
+        "@ai-sdk/groq": "^2.0.22",
+        "@ai-sdk/mistral": "^2.0.17",
         "@ai-sdk/openai": "^2.0.38",
         "@aws-sdk/client-s3": "^3.896.0",
         "@hono/zod-validator": "^0.7.3",
+        "@openrouter/ai-sdk-provider": "^1.2.0",
         "@supermemory/ai-sdk": "^1.0.8",
         "ai": "^5.0.56",
         "bcrypt": "^6.0.0",
@@ -32,9 +39,23 @@
     },
   },
   "packages": {
+    "@ai-sdk/anthropic": ["@ai-sdk/anthropic@2.0.20", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-5uNRnagf1mFx/hTPjLxNoR4yahnyTYkHXX/IpfL3qdtdUrQMrEwkwVgNssh1pfgEkIOs51sG/6j+ptQ8SE2Gvg=="],
+
+    "@ai-sdk/cerebras": ["@ai-sdk/cerebras@1.0.21", "", { "dependencies": { "@ai-sdk/openai-compatible": "1.0.19", "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-hYY5fsYyq+DP10xAn5Et3heFHzFNlmLweT3qWjW+Om3GwdeCcxg0kt8h1/BLpTtnfxnbNBZqXLUWsndXz72arA=="],
+
+    "@ai-sdk/cohere": ["@ai-sdk/cohere@2.0.12", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-v9jORdsIZHJ+AcHM5m3RpF+UTaiv9kId2UrCKToLVfHtGAA3ykmPLPM1XntMKSA6pfy0lNqUUbG1LXIzsPa1Yg=="],
+
     "@ai-sdk/gateway": ["@ai-sdk/gateway@1.0.30", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-QdrSUryr/CLcsCISokLHOImcHj1adGXk1yy4B3qipqLhcNc33Kj/O/3crI790Qp85oDx7sc4vm7R4raf9RA/kg=="],
 
+    "@ai-sdk/google": ["@ai-sdk/google@2.0.17", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-6LyuUrCZuiULg0rUV+kT4T2jG19oUntudorI4ttv1ARkSbwl8A39ue3rA487aDDy6fUScdbGFiV5Yv/o4gidVA=="],
+
+    "@ai-sdk/groq": ["@ai-sdk/groq@2.0.22", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-/AswqcXnMuZnpLzRxddB/WBEi0hM6IpqafrGGQE/jGQPIuIKPb8HyNatX67vJgHcD2s12YIKuFccaBPDYlUIVg=="],
+
+    "@ai-sdk/mistral": ["@ai-sdk/mistral@2.0.17", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-IizV9YTPzPrOxgaGeJIppkUb/BmuglcbqFHcfbXkJONLBm4SEIjhye1FMGMFueXjZs7IGZ0m+AhRbRNH6J42Jg=="],
+
     "@ai-sdk/openai": ["@ai-sdk/openai@2.0.38", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-aPK5jSz5/UkbYnh59/Yy5ic3JsOrz7Gt6TJdB8ggYDYEUHJ9FHEKoRKz8DEHh3Zaf3yngxZLkdP4JSbroK3jsQ=="],
+
+    "@ai-sdk/openai-compatible": ["@ai-sdk/openai-compatible@1.0.19", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.10" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-hnsqPCCSNKgpZRNDOAIXZs7OcUDM4ut5ggWxj2sjB4tNL/aBn/xrM7pJkqu+WuPowyrE60wPVSlw0LvtXAlMXQ=="],
 
     "@ai-sdk/provider": ["@ai-sdk/provider@2.0.0", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA=="],
 
@@ -239,6 +260,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.9", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.0.3", "@jridgewell/sourcemap-codec": "^1.4.10" } }, "sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ=="],
+
+    "@openrouter/ai-sdk-provider": ["@openrouter/ai-sdk-provider@1.2.0", "", { "peerDependencies": { "ai": "^5.0.0", "zod": "^3.24.1 || ^v4" } }, "sha512-stuIwq7Yb7DNmk3GuCtz+oS3nZOY4TXEV3V5KsknDGQN7Fpu3KRMQVWRc1J073xKdf0FC9EHOctSyzsACmp5Ag=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
