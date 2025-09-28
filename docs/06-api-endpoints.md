@@ -101,7 +101,7 @@ Authorization: Bearer <jwt_token>
 
 ### POST /api/resumes/upload
 
-**Upload and parse resume**
+**Upload and process resume with AI verification**
 
 **Headers:**
 
@@ -117,19 +117,196 @@ FormData:
 - file: <pdf/docx file>
 ```
 
-**Response (201):**
+**Response (201) - Fully Verified:**
 
 ```json
 {
-  "id": "uuid",
-  "fileName": "resume.pdf",
-  "fileType": "pdf",
-  "extractedData": {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "phone": "+1234567890"
-  },
-  "uploadedAt": "2025-09-27T10:00:00Z"
+  "resume_id": "uuid",
+  "file_name": "resume.pdf",
+  "verification_result": {
+    "is_resume": true,
+    "status": "verified",
+    "verified_data": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": "+1234567890"
+    },
+    "verification_method": "ai_only",
+    "message": "✅ Resume verified successfully! You can now start interviews."
+  }
+}
+```
+
+**Response (201) - Needs Manual Input:**
+
+```json
+{
+  "resume_id": "uuid",
+  "file_name": "resume.pdf", 
+  "verification_result": {
+    "is_resume": true,
+    "status": "needs_manual",
+    "extracted_data": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": null
+    },
+    "missing_fields": ["phone"],
+    "chat_session_id": "chat-uuid",
+    "chat_message": "I found your resume and extracted your name (John Doe) and email (john@example.com), but I couldn't find your phone number. Please provide your phone number:"
+  }
+}
+```
+
+**Response (400) - Not a Resume:**
+
+```json
+{
+  "error": {
+    "code": "NOT_RESUME",
+    "message": "This doesn't appear to be a resume. Please upload your CV/resume as a PDF file.",
+    "document_type": "invoice"
+  }
+}
+```
+
+---
+
+### POST /api/resumes/:id/chat
+
+**Chatbot manual input for missing resume fields**
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request:**
+
+```json
+{
+  "chat_session_id": "chat-uuid",
+  "user_message": "+1-555-123-4567"
+}
+```
+
+**Response (200) - Verification Successful:**
+
+```json
+{
+  "chat_session_id": "chat-uuid",
+  "ai_message": "Perfect! Let me verify all your information:",
+  "verification_attempt": {
+    "final_data": {
+      "name": "John Doe",
+      "email": "john@example.com", 
+      "phone": "+15551234567"
+    },
+    "is_verified": true,
+    "verification_method": "ai_plus_manual",
+    "message": "✅ Your resume is now verified! You can start the interview."
+  }
+}
+```
+
+**Response (200) - Validation Failed:**
+
+```json
+{
+  "chat_session_id": "chat-uuid", 
+  "ai_message": "The phone number format doesn't look quite right. Please provide a valid phone number (e.g., +1-555-123-4567):",
+  "verification_attempt": {
+    "is_verified": false,
+    "retry_count": 1,
+    "max_retries": 3,
+    "error": "Invalid phone format"
+  }
+}
+```
+
+**Response (400) - Max Retries Reached:**
+
+```json
+{
+  "error": {
+    "code": "MAX_RETRIES_REACHED",
+    "message": "Unable to verify resume after multiple attempts. Please try uploading a different resume.",
+    "retry_count": 3
+  }
+}
+```
+
+---
+
+### GET /api/resumes/user-resumes
+
+**Get user's verified resumes**
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200):**
+
+```json
+{
+  "resumes": [
+    {
+      "id": "resume-1",
+      "file_name": "john-resume-v1.pdf",
+      "extracted_name": "John Doe",
+      "extracted_email": "john@example.com", 
+      "extracted_phone": "+1234567890",
+      "verification_method": "ai_only",
+      "uploaded_at": "2025-09-27T10:00:00Z",
+      "verified_at": "2025-09-27T10:00:15Z"
+    },
+    {
+      "id": "resume-2", 
+      "file_name": "john-updated-resume.pdf",
+      "extracted_name": "John Doe",
+      "extracted_email": "john.doe@example.com",
+      "extracted_phone": "+1555123456",
+      "verification_method": "ai_plus_manual",
+      "uploaded_at": "2025-09-28T15:00:00Z",
+      "verified_at": "2025-09-28T15:02:30Z"
+    }
+  ]
+}
+```
+
+---
+
+### DELETE /api/resumes/:id
+
+**Delete a resume**
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Resume deleted successfully"
+}
+```
+
+**Response (409) - Resume In Use:**
+
+```json
+{
+  "error": {
+    "code": "RESUME_IN_USE",
+    "message": "Cannot delete resume - it's being used in active interview sessions"
+  }
 }
 ```
 
@@ -164,9 +341,56 @@ Authorization: Bearer <jwt_token>
 
 ## Questions (Recruiter Only)
 
+### GET /api/questions/bank
+
+**Browse existing questions in question bank**
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+
+```
+?difficulty=easy&category=React&type=mcq&limit=20&offset=0
+```
+
+**Response (200):**
+
+```json
+{
+  "questions": [
+    {
+      "id": "q-uuid-1",
+      "type": "mcq",
+      "difficulty": "easy",
+      "category": "React",
+      "question_text": "What is useState used for?",
+      "options": ["State management", "Side effects", "Context", "Routing"],
+      "correct_answer": "State management",
+      "time_limit": 20,
+      "points": 10,
+      "created_at": "2025-09-27T10:00:00Z"
+    }
+    // ... more questions
+  ],
+  "total": 45,
+  "categories": ["React", "Node.js", "JavaScript", "Database"],
+  "pagination": {
+    "limit": 20,
+    "offset": 0,
+    "has_more": true
+  }
+}
+```
+
+---
+
 ### POST /api/questions/generate
 
-**Generate questions using AI**
+**Generate 6 questions using AI**
 
 **Headers:**
 
@@ -180,11 +404,12 @@ Authorization: Bearer <jwt_token>
 {
   "role": "Full Stack Developer",
   "technologies": ["React", "Node.js", "PostgreSQL"],
-  "difficultyDistribution": {
+  "count": {
     "easy": 2,
     "medium": 2,
     "hard": 2
-  }
+  },
+  "existing_questions": ["q-uuid-1", "q-uuid-2"]
 }
 ```
 
@@ -195,24 +420,36 @@ Authorization: Bearer <jwt_token>
   "questions": [
     {
       "type": "mcq",
-      "difficulty": "easy",
-      "questionText": "What is useState used for?",
-      "options": ["...", "...", "...", "..."],
-      "correctAnswer": "...",
-      "timeLimit": 20,
+      "difficulty": "easy", 
+      "category": "React",
+      "question_text": "What is useState used for?",
+      "options": ["State management", "Side effects", "Context", "Routing"],
+      "correct_answer": "State management",
+      "time_limit": 20,
       "points": 10
+    },
+    {
+      "type": "short_answer",
+      "difficulty": "medium",
+      "category": "JavaScript",
+      "question_text": "Explain closures in JavaScript",
+      "expected_keywords": ["scope", "function", "variable", "lexical"],
+      "min_words": 30,
+      "max_words": 100,
+      "time_limit": 60,
+      "points": 20
     }
-    // ... 5 more questions
+    // ... 4 more questions
   ],
-  "estimatedTime": 360
+  "total_estimated_time": 400
 }
 ```
 
 ---
 
-### POST /api/questions/regenerate
+### POST /api/questions/:id/edit
 
-**Regenerate a specific question**
+**Edit/regenerate a specific question**
 
 **Headers:**
 
@@ -224,11 +461,15 @@ Authorization: Bearer <jwt_token>
 
 ```json
 {
-  "questionIndex": 2,
-  "currentQuestion": {
-    /* ... */
+  "current_question": {
+    "type": "short_answer",
+    "difficulty": "medium",
+    "question_text": "Explain React hooks",
+    "expected_keywords": ["useState", "useEffect", "lifecycle"],
+    "time_limit": 60,
+    "points": 20
   },
-  "feedback": "Make it more focused on async/await"
+  "edit_prompt": "Make it more focused on async/await and Promises"
 }
 ```
 
@@ -239,8 +480,13 @@ Authorization: Bearer <jwt_token>
   "question": {
     "type": "short_answer",
     "difficulty": "medium",
-    "questionText": "Explain async/await in JavaScript..."
-    // ... rest of question
+    "category": "JavaScript",
+    "question_text": "Explain async/await and how it relates to Promises in JavaScript",
+    "expected_keywords": ["async", "await", "promise", "asynchronous", "callback"],
+    "min_words": 30,
+    "max_words": 120,
+    "time_limit": 60,
+    "points": 20
   }
 }
 ```
@@ -344,11 +590,10 @@ Authorization: Bearer <jwt_token>
 {
   "title": "Frontend Developer Interview",
   "description": "Interview for senior frontend position",
-  "jobRole": "Full Stack Developer",
-  "isPublic": false,
-  "assignedEmails": ["candidate1@example.com", "candidate2@example.com"],
-  "deadline": "2025-10-15T23:59:59Z",
-  "questionIds": ["uuid1", "uuid2", "uuid3", "uuid4", "uuid5", "uuid6"]
+  "job_role": "Full Stack Developer",
+  "is_public": false,
+  "assigned_emails": ["candidate1@example.com", "candidate2@example.com"],
+  "deadline": "2025-10-15T23:59:59Z"
 }
 ```
 
@@ -360,6 +605,52 @@ Authorization: Bearer <jwt_token>
   "title": "Frontend Developer Interview",
   "status": "draft",
   "createdAt": "2025-09-27T10:00:00Z"
+}
+```
+
+---
+
+### POST /api/interviews/:id/assign-questions
+
+**Assign questions to interview**
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request:**
+
+```json
+{
+  "question_ids": ["q-uuid-1", "q-uuid-2", "q-uuid-3", "q-uuid-4", "q-uuid-5", "q-uuid-6"],
+  "points_override": {
+    "q-uuid-1": 15,
+    "q-uuid-3": 25
+  }
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "assigned_questions": [
+    {
+      "question_id": "q-uuid-1",
+      "order_index": 0,
+      "points": 15
+    },
+    {
+      "question_id": "q-uuid-2", 
+      "order_index": 1,
+      "points": 10
+    }
+    // ... 4 more
+  ],
+  "total_estimated_time": 420
 }
 ```
 
@@ -592,9 +883,52 @@ Authorization: Bearer <jwt_token>
 
 ---
 
+### GET /api/interviews/:id/resume-check
+
+**Check if user can start interview (has verified resume)**
+
+**Headers:**
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200):**
+
+```json
+{
+  "can_start_interview": true,
+  "existing_resumes": [
+    {
+      "id": "resume-1",
+      "file_name": "john-resume-v1.pdf",
+      "extracted_name": "John Doe",
+      "extracted_email": "john@example.com", 
+      "extracted_phone": "+1234567890",
+      "uploaded_at": "2025-09-27T10:00:00Z",
+      "is_verified": true
+    }
+  ],
+  "needs_upload": false
+}
+```
+
+**Response (200) - No verified resumes:**
+
+```json
+{
+  "can_start_interview": false,
+  "existing_resumes": [],
+  "needs_upload": true,
+  "message": "Please upload and verify your resume before starting the interview"
+}
+```
+
+---
+
 ### POST /api/interviews/:id/start
 
-**Start interview (creates session)**
+**Start interview with verified resume (creates session with locking)**
 
 **Headers:**
 
@@ -606,7 +940,7 @@ Authorization: Bearer <jwt_token>
 
 ```json
 {
-  "resumeId": "uuid" // optional, if reusing
+  "resume_id": "uuid"
 }
 ```
 
@@ -614,20 +948,45 @@ Authorization: Bearer <jwt_token>
 
 ```json
 {
-  "sessionId": "uuid",
-  "startedAt": "2025-09-27T11:00:00Z",
+  "session_id": "uuid",
+  "session_token": "unique-session-token",
+  "started_at": "2025-09-27T11:00:00Z",
+  "locked_until": "2025-09-27T14:00:00Z",
   "questions": [
     {
       "id": "uuid",
       "type": "mcq",
-      "questionText": "...",
+      "question_text": "...",
       "options": ["...", "...", "...", "..."],
-      "timeLimit": 20
+      "time_limit": 20
     }
     // ... 5 more (without answers!)
   ],
-  "timeLimits": [20, 20, 60, 60, 120, 120],
-  "serverTime": "2025-09-27T11:00:00.523Z"
+  "time_limits": [20, 20, 60, 60, 120, 120],
+  "server_time": "2025-09-27T11:00:00.523Z"
+}
+```
+
+**Response (409) - Already in progress:**
+
+```json
+{
+  "error": {
+    "code": "INTERVIEW_IN_PROGRESS", 
+    "message": "Interview already in progress in another session",
+    "active_session_id": "existing-session-uuid"
+  }
+}
+```
+
+**Response (400) - No verified resume:**
+
+```json
+{
+  "error": {
+    "code": "NO_VERIFIED_RESUME",
+    "message": "Cannot start interview - no verified resume provided"
+  }
 }
 ```
 
@@ -680,10 +1039,11 @@ Authorization: Bearer <jwt_token>
 
 ```json
 {
-  "questionIndex": 0,
+  "session_token": "unique-session-token",
+  "question_index": 0,
   "answer": "useState",
-  "submittedAt": "2025-09-27T11:00:18Z",
-  "timeExpired": false
+  "submitted_at": "2025-09-27T11:00:18Z",
+  "time_expired": false
 }
 ```
 

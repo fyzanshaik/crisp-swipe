@@ -58,12 +58,18 @@ app.post("/api/interviews/:id/start", async (req, res) => {
     with: { questions: true },
   });
 
-  // Create session
+  // Create session with locking
+  const sessionToken = generateUniqueToken();
+  const lockedUntil = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
+  
   const [session] = await db
     .insert(interview_sessions)
     .values({
       interview_id: interviewId,
       user_id: userId,
+      resume_id: resumeId, // Required: verified resume
+      session_token: sessionToken,
+      locked_until: lockedUntil,
       started_at: new Date(),
       current_question_index: 0,
       status: "in_progress",
@@ -165,12 +171,22 @@ const submitAnswer = async (answer, options = {}) => {
 // POST /api/interviews/:sessionId/answers
 app.post("/api/interviews/:sessionId/answers", async (req, res) => {
   const { sessionId } = req.params;
-  const { question_index, answer, submitted_at, time_expired } = req.body;
+  const { session_token, question_index, answer, submitted_at, time_expired } = req.body;
 
   const session = await db.query.interview_sessions.findFirst({
     where: eq(interview_sessions.id, sessionId),
     with: { interview: { with: { questions: true } } },
   });
+
+  // Validate session token (prevents concurrent sessions)
+  if (session.session_token !== session_token) {
+    return res.status(401).json({ error: "Invalid session token" });
+  }
+
+  // Check session lock expiry
+  if (session.locked_until < new Date()) {
+    return res.status(409).json({ error: "Session expired" });
+  }
 
   // Validate question index
   if (question_index !== session.current_question_index) {
@@ -226,11 +242,12 @@ app.post("/api/interviews/:sessionId/answers", async (req, res) => {
     })
     .where(eq(interview_sessions.id, sessionId));
 
-  // Queue background evaluation
-  await queue.add("evaluate-answer", {
+  // Queue background evaluation (in-memory)
+  await evaluationQueue.addJob({
     session_id: sessionId,
     question_id: session.interview.questions[question_index].id,
     answer,
+    question_type: session.interview.questions[question_index].type,
   });
 
   // Return next question or completion
@@ -362,12 +379,47 @@ app.get("/api/interviews/active", async (req, res) => {
 
 ### Phase 4: Background Evaluation
 
-#### Evaluation Worker
+#### In-Memory Evaluation Queue
 
 ```javascript
-// Background job processor
-queue.process("evaluate-answer", async (job) => {
-  const { session_id, question_id, answer } = job.data;
+// Simple in-memory job queue for MVP
+class EvaluationQueue {
+  constructor() {
+    this.queue = [];
+    this.processing = false;
+  }
+
+  async addJob(jobData) {
+    this.queue.push({
+      id: generateJobId(),
+      data: jobData,
+      createdAt: new Date(),
+      attempts: 0,
+      maxAttempts: 3
+    });
+    
+    if (!this.processing) {
+      this.processQueue();
+    }
+  }
+
+  async processQueue() {
+    this.processing = true;
+    
+    while (this.queue.length > 0) {
+      const job = this.queue.shift();
+      try {
+        await this.evaluateAnswer(job);
+      } catch (error) {
+        await this.handleJobError(job, error);
+      }
+    }
+    
+    this.processing = false;
+  }
+
+  async evaluateAnswer(job) {
+    const { session_id, question_id, answer, question_type } = job.data;
 
   const question = await db.query.questions.findFirst({
     where: eq(questions.id, question_id),
@@ -819,6 +871,67 @@ const session = await db.query.interview_sessions.findFirst({
 // - current_question_index
 // - Server's current time
 // No device-specific data needed!
+```
+
+---
+
+## Session Locking & Concurrency
+
+### Preventing Multiple Tabs/Devices
+
+**Problem:** User opens interview in multiple tabs or devices
+
+**Solution:** Session token + lock timeout system
+
+```javascript
+// Check for existing active session
+const existingSession = await db.query.interview_sessions.findFirst({
+  where: and(
+    eq(interview_sessions.user_id, userId),
+    eq(interview_sessions.interview_id, interviewId),
+    eq(interview_sessions.status, 'in_progress')
+  )
+});
+
+if (existingSession && existingSession.locked_until > new Date()) {
+  return res.status(409).json({
+    error: "Interview already in progress",
+    active_session_id: existingSession.id,
+    locked_until: existingSession.locked_until
+  });
+}
+
+// If lock expired, mark session as abandoned
+if (existingSession && existingSession.locked_until < new Date()) {
+  await db.update(interview_sessions)
+    .set({ status: 'abandoned' })
+    .where(eq(interview_sessions.id, existingSession.id));
+}
+```
+
+### Session Recovery Flow
+
+```javascript
+// User opens Tab B while Tab A is active
+GET /api/interviews/active
+
+if (activeSession.locked_until > serverTime) {
+  return {
+    error: "INTERVIEW_IN_PROGRESS_ELSEWHERE", 
+    message: "Interview is active in another tab/device",
+    locked_until: activeSession.locked_until
+  };
+}
+
+// If user closes all tabs and comes back later
+if (activeSession.locked_until < serverTime) {
+  // Show "Welcome Back" modal with time calculation
+  return {
+    active_session: activeSession,
+    time_remaining: calculateRemainingTime(activeSession),
+    server_time: new Date()
+  };
+}
 ```
 
 ---

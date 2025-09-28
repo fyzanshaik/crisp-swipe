@@ -14,7 +14,9 @@
     "@types/bun": "latest",
     "@types/pg": "^8.15.5",
     "drizzle-kit": "^0.31.5",
-    "tsx": "^4.20.6"
+    "i": "^0.3.7",
+    "tsx": "^4.20.6",
+    "wrangler": "^4.40.2"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -30,6 +32,7 @@
     "drizzle-zod": "^0.8.3",
     "hono": "^4.9.9",
     "pg": "^8.16.3",
+    "workers-ai-provider": "^2.0.0",
     "zod": "^4.1.11"
   }
 }

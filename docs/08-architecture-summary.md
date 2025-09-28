@@ -47,8 +47,8 @@
 │                   EXTERNAL SERVICES                      │
 │                                                          │
 │  ├── OpenAI / Anthropic (via Vercel AI SDK)            │
-│  ├── File Storage (local or S3)                         │
-│  └── Redis (optional: AI response caching)              │
+│  ├── Cloudflare R2 (resume storage)                    │
+│  └── In-Memory Job Queue (evaluation processing)        │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -165,22 +165,44 @@
 
 ## Data Flow Patterns
 
+### Resume Verification Flow
+
+```
+1. User uploads resume file
+   ↓
+2. POST /api/resumes/upload
+   ├── File uploaded to Cloudflare R2
+   ├── AI processes synchronously (5-10s)
+   ├── Extracts name, email, phone
+   ↓
+3. Three outcomes:
+   ├── ✅ Fully verified → Save to database → Enable interview
+   ├── ⚠️ Missing fields → Chatbot interaction → Manual input → AI validation → Save
+   └── ❌ Not a resume → Error message → Request re-upload
+```
+
 ### Interview Start Flow
 
 ```
 1. Candidate clicks "Start Interview"
    ↓
-2. POST /api/interviews/:id/start
-   ├── Server creates interview_session
-   ├── Records started_at (timestamp)
-   ├── Returns questions + time_limits
+2. GET /api/interviews/:id/resume-check
+   ├── Check for verified resumes
+   └── Return resume options or upload required
    ↓
-3. Client stores in Zustand
+3. POST /api/interviews/:id/start { resume_id }
+   ├── Server creates interview_session with session_token
+   ├── Sets locked_until (3 hour expiry)
+   ├── Records started_at (timestamp)
+   ├── Returns questions + session_token
+   ↓
+4. Client stores in Zustand
+   ├── sessionToken: "unique-token"
    ├── currentQuestion: 0
    ├── startedAt: new Date(server_time)
    ├── timeRemaining: 20
    ↓
-4. Timer starts (local calculation)
+5. Timer starts (local calculation)
    remaining = timeLimit - (now - startedAt)
 ```
 
@@ -226,9 +248,9 @@
 ### Evaluation Flow (Background)
 
 ```
-1. Answer submitted → Queued for evaluation
+1. Answer submitted → Added to in-memory queue
    ↓
-2. Background job processes answer
+2. EvaluationQueue.processQueue()
    ├── MCQ: Auto-grade (instant)
    ├── Short Answer: Keywords + AI (5-10s)
    ├── Code: AI evaluation (10-15s)
@@ -236,6 +258,7 @@
 3. Score & feedback saved to DB
    ├── Update answer.score
    ├── Update answer.feedback (JSON)
+   ├── Update answer.ai_model_used
    ├── Set evaluated: true
    ↓
 4. Check if all answers evaluated
@@ -673,9 +696,9 @@ logger.error("AI evaluation failed", {
 | **Database** | PostgreSQL       | Relational database              |
 | **AI**       | OpenAI/Anthropic | Question generation & evaluation |
 | **Storage**  | IndexedDB        | Client-side cache                |
-|              | Local/S3         | File storage (resumes)           |
-| **Optional** | Redis            | AI response caching              |
-|              | Socket.io        | Real-time updates                |
+|              | Cloudflare R2    | Resume file storage              |
+| **Queue**    | In-Memory        | Background evaluation jobs       |
+| **Future**   | Socket.io        | Real-time updates (optional)     |
 
 ---
 

@@ -22,7 +22,8 @@
 - Drizzle ORM (lightweight, SQL-like, type-safe)
 - Vercel AI SDK (question generation + evaluation)
 - JWT authentication (stateless, simple)
-- Background job system (async AI evaluation)
+- In-memory job queue (async AI evaluation)
+- Cloudflare R2 (resume file storage)
 ```
 
 ### Package Manager
@@ -34,10 +35,11 @@
 ### Data Persistence Strategy
 
 ```
-- PostgreSQL: Source of truth (all data)
+- PostgreSQL: Source of truth (all interview data, user data)
+- Cloudflare R2: Resume file storage (PDF/DOCX files)
 - IndexedDB: TanStack Query cache (survives refresh)
 - Zustand: Ephemeral state (timers, current UI state)
-- Redis: (Optional later) AI response caching
+- In-memory: Background job queue (evaluation processing)
 ```
 
 ---
@@ -228,24 +230,42 @@ Client State (Zustand):
 
 ---
 
-### Why Redis is Optional?
+### Why Cloudflare R2 for File Storage?
 
-**Decision:** PostgreSQL only for MVP, Redis later if needed
+**Decision:** Cloudflare R2 for resume storage
 
-**Reasoning:**
+**Pros:**
 
-- PostgreSQL can handle 100s of concurrent interviews easily
-- Redis useful for:
-  - AI response caching (avoid re-evaluation)
-  - Rate limiting API calls
-  - Session management (if needed)
-- But NOT needed for timer persistence (server stores in PostgreSQL, client calculates locally)
+- ✅ S3-compatible API (easy to use)
+- ✅ Lower egress costs than AWS S3
+- ✅ Global CDN for fast file access
+- ✅ Built-in security features
+- ✅ Simple bucket management
 
-**Add Redis Later IF:**
+**Alternatives Rejected:**
 
-- PostgreSQL becomes slow (unlikely)
-- Need to cache expensive AI calls
-- Want rate limiting for AI APIs
+- ❌ Local file storage: Not scalable, deployment issues
+- ❌ AWS S3: Higher costs for egress
+- ❌ Database BLOB storage: Poor performance for large files
+
+---
+
+### Why In-Memory Job Queue (not Redis/BullMQ)?
+
+**Decision:** Simple in-memory queue for background evaluation
+
+**Pros:**
+
+- ✅ No external dependencies
+- ✅ Simpler deployment
+- ✅ Handles MVP scale (100s of evaluations)
+- ✅ Can upgrade to Redis/BullMQ later if needed
+
+**When to Add Redis Later:**
+
+- Need persistent job queues (survive server restarts)
+- Scale beyond 1000s of concurrent evaluations
+- Want advanced job retry/scheduling features
 
 ---
 
