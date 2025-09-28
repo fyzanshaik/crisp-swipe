@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { eq, desc } from "drizzle-orm";
 import { requireRecruiter } from "../middleware/recruiter-auth";
