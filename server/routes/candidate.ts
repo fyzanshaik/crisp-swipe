@@ -5,6 +5,7 @@ import { db } from "../db/db";
 import { interviews, interviewSessions, resumes, answers } from "../db/schema";
 import { uploadFile, generateResumeKey, isValidResumeType } from "../utils/r2";
 import { extractResumeData, processChatbotMessage } from "../utils/ai-integration";
+import { evaluationQueue } from "../utils/evaluation-queue";
 
 const candidateRoute = new Hono()
   .use("*", requireCandidate)
@@ -775,6 +776,14 @@ const candidateRoute = new Hono()
       evaluated: false
     });
 
+    await evaluationQueue.addJob({
+      sessionId: session.id,
+      questionId: currentQuestion.question.id,
+      answerText: answer,
+      questionType: currentQuestion.question.type,
+      questionData: currentQuestion.question
+    });
+
     const nextQuestionIndex = question_index + 1;
     const isComplete = nextQuestionIndex >= questions.length;
 
@@ -823,6 +832,95 @@ const candidateRoute = new Hono()
       },
       timeLimit: nextQuestion.question.timeLimit,
       serverTime: serverNow.toISOString()
+    });
+  })
+  .post("/test-evaluation/:sessionId", async (c) => {
+    const sessionId = c.req.param('sessionId');
+
+    const session = await db.query.interviewSessions.findFirst({
+      where: eq(interviewSessions.id, sessionId),
+      with: {
+        answers: {
+          with: {
+            question: true
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+
+    let evaluationJobs = 0;
+    for (const answer of session.answers) {
+      if (!answer.evaluated) {
+        await evaluationQueue.addJob({
+          sessionId: session.id,
+          questionId: answer.questionId,
+          answerText: answer.answerText,
+          questionType: answer.question.type,
+          questionData: answer.question
+        });
+        evaluationJobs++;
+      }
+    }
+
+    return c.json({
+      message: `Queued ${evaluationJobs} evaluation jobs for session ${sessionId}`,
+      queueStatus: evaluationQueue.getQueueStatus()
+    });
+  })
+  .get("/evaluation-status/:sessionId", async (c) => {
+    const sessionId = c.req.param('sessionId');
+
+    const session = await db.query.interviewSessions.findFirst({
+      where: eq(interviewSessions.id, sessionId),
+      with: {
+        answers: {
+          with: {
+            question: {
+              columns: {
+                id: true,
+                type: true,
+                questionText: true,
+                points: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+
+    const evaluationStatus = session.answers.map(answer => ({
+      questionId: answer.questionId,
+      questionType: answer.question?.type,
+      questionText: answer.question?.questionText?.substring(0, 100) + "...",
+      answerText: answer.answerText.substring(0, 100) + "...",
+      evaluated: answer.evaluated,
+      score: answer.score,
+      maxPoints: answer.question?.points,
+      evaluatedAt: answer.evaluatedAt
+    }));
+
+    const totalEvaluated = session.answers.filter(a => a.evaluated).length;
+    const totalAnswers = session.answers.length;
+
+    return c.json({
+      sessionId,
+      sessionStatus: session.status,
+      evaluationProgress: `${totalEvaluated}/${totalAnswers}`,
+      finalScore: session.finalScore,
+      maxScore: session.maxScore,
+      percentage: session.percentage,
+      aiSummary: session.aiSummary,
+      evaluatedAt: session.evaluatedAt,
+      answers: evaluationStatus,
+      queueStatus: evaluationQueue.getQueueStatus()
     });
   });
 
