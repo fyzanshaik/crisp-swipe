@@ -14,9 +14,9 @@ users
          │                 │
          ↓                 ↓
     interview_questions   answers
-         │                 
-         ↓                 
-    questions              
+         │
+         ↓
+    questions
 ```
 
 ---
@@ -84,7 +84,7 @@ CREATE TABLE resumes (
   
   uploaded_at TIMESTAMP DEFAULT NOW(),
   verified_at TIMESTAMP DEFAULT NOW(),
-  
+
   CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -131,26 +131,26 @@ CREATE TABLE questions (
   difficulty VARCHAR(50) NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
   category VARCHAR(100), -- 'React', 'Node.js', 'JavaScript', etc.
   question_text TEXT NOT NULL,
-  
+
   -- MCQ specific
   options JSONB, -- ["option1", "option2", "option3", "option4"]
   correct_answer TEXT,
-  
+
   -- Short answer specific
   expected_keywords JSONB, -- ["keyword1", "keyword2", ...]
   min_words INTEGER,
   max_words INTEGER,
-  
+
   -- Code specific
   language VARCHAR(50), -- 'javascript', 'python', etc.
   starter_code TEXT,
   sample_solution TEXT,
   evaluation_criteria JSONB, -- ["criteria1", "criteria2", ...]
-  
+
   -- Common
   time_limit INTEGER NOT NULL, -- seconds
   points INTEGER NOT NULL,
-  
+
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -170,16 +170,16 @@ export const questions = pgTable('questions', {
   difficulty: varchar('difficulty', { length: 50 }).notNull().$type<'easy' | 'medium' | 'hard'>(),
   category: varchar('category', { length: 100 }),
   questionText: text('question_text').notNull(),
-  
+
   // MCQ
   options: jsonb('options').$type<string[]>(),
   correctAnswer: text('correct_answer'),
-  
+
   // Short answer
   expectedKeywords: jsonb('expected_keywords').$type<string[]>(),
   minWords: integer('min_words'),
   maxWords: integer('max_words'),
-  
+
   // Code
   language: varchar('language', { length: 50 }),
   starterCode: text('starter_code'),
