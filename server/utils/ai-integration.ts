@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generateObject, generateText } from "ai";
+import { generateObject} from "ai";
 import { generateObjectWithModel, getDefaultModel } from "./ai-models.js";
 import { createQuestionSchema } from "./validation.js";
 import {
@@ -116,7 +116,7 @@ export const extractResumeData = async (
   }
 };
 
-const chatbotResponseSchema = z.object({
+export const chatbotResponseSchema = z.object({
   message: z.string().describe("Friendly message to user"),
   extracted_data: z.object({
     email: z.string().describe("Email from user message or empty"),
