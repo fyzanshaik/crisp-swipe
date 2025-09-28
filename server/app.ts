@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
 import { authRoute } from "./routes/auth";
 import { recruiterRoute } from "./routes/recruiter";
+import { candidateRoute } from "./routes/candidate";
 import { performHealthCheck } from "./utils/health";
 
 const app = new Hono();
@@ -23,6 +24,7 @@ app.get("/api/health", async (c) => {
 const apiRoutes = app.basePath("/api")
   .route("/auth", authRoute)
   .route("/recruiter", recruiterRoute)
+  .route("/candidate", candidateRoute)
   .get("/health", async (c) => {
     const health = await performHealthCheck();
     return c.json(health, health.overall ? 200 : 503);
