@@ -11,9 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRecruiterDashboardRouteImport } from './routes/_authenticated/recruiter/dashboard'
+import { Route as AuthenticatedCandidateDashboardRouteImport } from './routes/_authenticated/candidate/dashboard'
+import { Route as AuthenticatedCandidateInterviewIdRouteImport } from './routes/_authenticated/candidate/interview.$id'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -23,6 +27,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -39,39 +48,96 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRecruiterDashboardRoute =
+  AuthenticatedRecruiterDashboardRouteImport.update({
+    id: '/recruiter/dashboard',
+    path: '/recruiter/dashboard',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCandidateDashboardRoute =
+  AuthenticatedCandidateDashboardRouteImport.update({
+    id: '/candidate/dashboard',
+    path: '/candidate/dashboard',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCandidateInterviewIdRoute =
+  AuthenticatedCandidateInterviewIdRouteImport.update({
+    id: '/candidate/interview/$id',
+    path: '/candidate/interview/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
+  '/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
+  '/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
+  '/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
+  '/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_authenticated': typeof AuthenticatedRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_authenticated/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
+  '/_authenticated/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
+  '/_authenticated/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/login' | '/register'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/candidate/dashboard'
+    | '/recruiter/dashboard'
+    | '/candidate/interview/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/login' | '/register'
-  id: '__root__' | '/' | '/_authenticated' | '/about' | '/login' | '/register'
+  to:
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/candidate/dashboard'
+    | '/recruiter/dashboard'
+    | '/candidate/interview/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/about'
+    | '/dashboard'
+    | '/login'
+    | '/register'
+    | '/_authenticated/candidate/dashboard'
+    | '/_authenticated/recruiter/dashboard'
+    | '/_authenticated/candidate/interview/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthenticatedRoute: typeof AuthenticatedRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AboutRoute: typeof AboutRoute
+  DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
 }
@@ -90,6 +156,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -113,13 +186,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/recruiter/dashboard': {
+      id: '/_authenticated/recruiter/dashboard'
+      path: '/recruiter/dashboard'
+      fullPath: '/recruiter/dashboard'
+      preLoaderRoute: typeof AuthenticatedRecruiterDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/candidate/dashboard': {
+      id: '/_authenticated/candidate/dashboard'
+      path: '/candidate/dashboard'
+      fullPath: '/candidate/dashboard'
+      preLoaderRoute: typeof AuthenticatedCandidateDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/candidate/interview/$id': {
+      id: '/_authenticated/candidate/interview/$id'
+      path: '/candidate/interview/$id'
+      fullPath: '/candidate/interview/$id'
+      preLoaderRoute: typeof AuthenticatedCandidateInterviewIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedCandidateDashboardRoute: typeof AuthenticatedCandidateDashboardRoute
+  AuthenticatedRecruiterDashboardRoute: typeof AuthenticatedRecruiterDashboardRoute
+  AuthenticatedCandidateInterviewIdRoute: typeof AuthenticatedCandidateInterviewIdRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCandidateDashboardRoute: AuthenticatedCandidateDashboardRoute,
+  AuthenticatedRecruiterDashboardRoute: AuthenticatedRecruiterDashboardRoute,
+  AuthenticatedCandidateInterviewIdRoute:
+    AuthenticatedCandidateInterviewIdRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthenticatedRoute: AuthenticatedRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AboutRoute: AboutRoute,
+  DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
 }

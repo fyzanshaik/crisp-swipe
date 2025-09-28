@@ -3,12 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Brain, Users, Clock, Shield, Star, CheckCircle } from "lucide-react";
+import { useAuth } from "@/lib/use-auth";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
+  const { user, isAuthenticated, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
@@ -19,14 +22,30 @@ function Index() {
           </div>
           <div className="flex items-center space-x-4">
             <ModeToggle />
-            <div className="space-x-2">
-              <Button asChild variant="ghost">
-                <Link to="/login">Login</Link>
-              </Button>
-              <Button asChild>
-                <Link to="/register">Get Started</Link>
-              </Button>
-            </div>
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-muted-foreground">
+                  Hello, {user?.name}!
+                </span>
+                <Button asChild>
+                  <Link to="/dashboard">
+                    Dashboard
+                  </Link>
+                </Button>
+                <Button variant="outline" onClick={() => logout()}>
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <div className="space-x-2">
+                <Button asChild variant="ghost">
+                  <Link to="/login">Login</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/register">Get Started</Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </header>

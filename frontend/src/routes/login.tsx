@@ -1,19 +1,20 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain } from "lucide-react";
+import { Brain, Loader2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
-import { api } from "@/lib/api";
+import { useAuth } from "@/lib/use-auth";
 
 export const Route = createFileRoute("/login")({
   component: Login,
 });
 
 function Login() {
-  const navigate = useNavigate();
+    // const navigate = useNavigate();
+  const { login, isLoading } = useAuth();
   
   const form = useForm({
     defaultValues: {
@@ -32,21 +33,7 @@ function Login() {
       },
     },
     onSubmit: async ({ value }) => {
-      const res = await api.auth.login.$post({ json: value });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error('error' in error ? error.error : 'Login failed');
-      }
-      
-      // Navigate based on user role
-      const userData = await res.json();
-      if (userData.user.role === 'candidate') {
-        navigate({ to: "/" }); // TODO: Navigate to candidate dashboard when created
-      } else if (userData.user.role === 'recruiter') {
-        navigate({ to: "/" }); // TODO: Navigate to recruiter dashboard when created
-      } else {
-        navigate({ to: "/" });
-      }
+           await login(value.email, value.password);
     },
   });
 
@@ -54,24 +41,12 @@ function Login() {
     form.setFieldValue('email', email);
     form.setFieldValue('password', password);
     
-    try {
-      const res = await api.auth.login.$post({ json: { email, password } });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error('error' in error ? error.error : 'Auto-login failed');
-      }
-      
-      const userData = await res.json();
-      if (userData.user.role === 'candidate') {
-        navigate({ to: "/" }); // TODO: Navigate to candidate dashboard when created
-      } else if (userData.user.role === 'recruiter') {
-        navigate({ to: "/" }); // TODO: Navigate to recruiter dashboard when created
-      } else {
-        navigate({ to: "/" });
-      }
-    } catch (error) {
-      console.error('Auto-login failed:', error);
-    }
+         try {
+           await login(email, password);
+           // Redirect will be handled by the auth context
+         } catch (error) {
+           console.error('Auto-login failed:', error);
+         }
   };
 
   return (
@@ -154,9 +129,16 @@ function Login() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={!canSubmit || isSubmitting}
+                    disabled={!canSubmit || isSubmitting || isLoading}
                   >
-                    {isSubmitting ? "Signing in..." : "Sign In"}
+                    {isSubmitting || isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
                   </Button>
                 )}
               />
@@ -179,14 +161,22 @@ function Login() {
                   variant="outline"
                   onClick={() => handleAutoLogin("swipeuser@gmail.com", "11111111")}
                   className="text-sm"
+                  disabled={isLoading}
                 >
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  ) : null}
                   Swipe Candidate
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleAutoLogin("swipeadmin@gmail.com", "11111111")}
                   className="text-sm"
+                  disabled={isLoading}
                 >
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  ) : null}
                   Swipe Recruiter
                 </Button>
               </div>

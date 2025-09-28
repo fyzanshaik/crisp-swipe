@@ -52,7 +52,8 @@ export const authRoute = new Hono()
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 24 * 60 * 60
+      maxAge: 24 * 60 * 60,
+      domain: process.env.NODE_ENV === "production" ? undefined : "localhost"
     });
     
     return c.json({
@@ -82,12 +83,13 @@ export const authRoute = new Hono()
     }
     
     const token = await generateToken(user.id, user.email, user.role);
-    
+
     setCookie(c, "auth-token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 24 * 60 * 60
+      maxAge: 24 * 60 * 60,
+      domain: process.env.NODE_ENV === "production" ? undefined : "localhost"
     });
     
     return c.json({

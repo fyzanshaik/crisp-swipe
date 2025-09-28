@@ -1,9 +1,10 @@
 import { scan } from "react-scan";
-import { StrictMode } from "react";
+import { StrictMode, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { AuthProvider } from "@/lib/auth";
+import { useAuth } from "@/lib/use-auth";
 import "./index.css";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
@@ -31,9 +32,29 @@ declare module "@tanstack/react-router" {
 }
 export function InnerApp() {
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
+    <AuthProvider router={router}>
+      <RouterProviderWithAuth />
     </AuthProvider>
+  );
+}
+
+function RouterProviderWithAuth() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  
+  const routerContext = useMemo(() => ({
+    queryClient,
+    auth: {
+      user,
+      isAuthenticated,
+      isLoading,
+    }
+  }), [user, isAuthenticated, isLoading]);
+  
+  return (
+    <RouterProvider 
+      router={router} 
+      context={routerContext} 
+    />
   );
 }
 

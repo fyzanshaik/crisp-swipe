@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,18 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Brain, ChevronDown } from "lucide-react";
+import { Brain, ChevronDown, Loader2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
-import { api } from "@/lib/api";
+import { useAuth } from "@/lib/use-auth";
 
 export const Route = createFileRoute("/register")({
   component: Register,
 });
 
 function Register() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
+  const { register, isLoading } = useAuth();
   
   const form = useForm({
     defaultValues: {
@@ -51,20 +52,14 @@ function Register() {
         throw new Error('Please select a valid role');
       }
       
-      const res = await api.auth.register.$post({ 
-        json: {
-          name: value.name,
-          email: value.email,
-          password: value.password,
-          phone: value.phone || undefined,
-          role: value.role as "candidate" | "recruiter"
-        }
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error('error' in error ? error.error : 'Registration failed');
-      }
-      navigate({ to: "/login" });
+             await register({
+               name: value.name,
+               email: value.email,
+               password: value.password,
+               phone: value.phone || undefined,
+               role: value.role as "candidate" | "recruiter"
+             });
+
     },
   });
 
@@ -235,9 +230,16 @@ function Register() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={!canSubmit || isSubmitting}
+                    disabled={!canSubmit || isSubmitting || isLoading}
                   >
-                    {isSubmitting ? "Registering..." : "Register"}
+                    {isSubmitting || isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Registering...
+                      </>
+                    ) : (
+                      "Register"
+                    )}
                   </Button>
                 )}
               />
