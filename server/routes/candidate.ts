@@ -2,10 +2,9 @@ import { Hono } from "hono";
 import { eq, and, or, sql } from "drizzle-orm";
 import { requireCandidate } from "../middleware/candidate-auth";
 import { db } from "../db/db";
-import { interviews, interviewSessions, resumes } from "../db/schema";
+import { interviews, interviewSessions, resumes, answers } from "../db/schema";
 import { uploadFile, generateResumeKey, isValidResumeType } from "../utils/r2";
 import { extractResumeData, processChatbotMessage } from "../utils/ai-integration";
-import { z } from "zod";
 
 const candidateRoute = new Hono()
   .use("*", requireCandidate)
@@ -658,6 +657,172 @@ const candidateRoute = new Hono()
         serverTime: currentTime.toISOString(),
         canResume: timeRemaining > 0
       }
+    });
+  })
+  .post("/interviews/:sessionId/answers", async (c) => {
+    const user = c.get('user');
+    const sessionId = c.req.param('sessionId');
+
+    let body;
+    try {
+      body = await c.req.json();
+    } catch (error) {
+      return c.json({ error: "Invalid JSON in request body" }, 400);
+    }
+
+    const { session_token, question_index, answer } = body;
+
+    if (!session_token || question_index === undefined || !answer) {
+      return c.json({
+        error: "Missing required fields: session_token, question_index, answer"
+      }, 400);
+    }
+
+    const session = await db.query.interviewSessions.findFirst({
+      where: eq(interviewSessions.id, sessionId),
+      with: {
+        interview: {
+          with: {
+            questions: {
+              with: {
+                question: true
+              },
+              orderBy: (interviewQuestions, { asc }) => [asc(interviewQuestions.orderIndex)]
+            }
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+
+    if (session.userId !== user.userId) {
+      return c.json({ error: "Session does not belong to user" }, 403);
+    }
+
+    if (session.sessionToken !== session_token) {
+      return c.json({ error: "Invalid session token" }, 401);
+    }
+
+    if (session.status !== 'in_progress') {
+      return c.json({ error: "Session is not in progress" }, 409);
+    }
+
+    if (session.lockedUntil && session.lockedUntil < new Date()) {
+      return c.json({ error: "Session has expired" }, 409);
+    }
+
+    if (question_index !== session.currentQuestionIndex) {
+      return c.json({
+        error: "Invalid question index",
+        expected: session.currentQuestionIndex,
+        received: question_index
+      }, 400);
+    }
+
+    const serverNow = new Date();
+    const startedAt = new Date(session.startedAt || serverNow);
+    const totalElapsed = (serverNow.getTime() - startedAt.getTime()) / 1000;
+
+    const questions = session.interview?.questions || [];
+
+    let expectedMinTime = 0;
+    for (let i = 0; i < question_index; i++) {
+      const questionData = questions[i];
+      if (questionData) {
+        expectedMinTime += questionData.question.timeLimit;
+      }
+    }
+
+    if (totalElapsed < expectedMinTime - 5) {
+      return c.json({
+        error: "Invalid submission time - too fast",
+        details: {
+          totalElapsed: Math.floor(totalElapsed),
+          expectedMinTime,
+          difference: Math.floor(totalElapsed - expectedMinTime)
+        }
+      }, 400);
+    }
+
+    const currentQuestion = questions[question_index];
+    if (!currentQuestion) {
+      return c.json({ error: "Question not found" }, 404);
+    }
+
+    const timeForCurrentQ = totalElapsed - expectedMinTime;
+    const timeLimit = currentQuestion.question.timeLimit;
+
+    if (timeForCurrentQ > timeLimit + 2) {
+      return c.json({
+        error: "Time limit exceeded",
+        details: {
+          timeForCurrentQuestion: Math.floor(timeForCurrentQ),
+          timeLimit,
+          exceeded: Math.floor(timeForCurrentQ - timeLimit)
+        }
+      }, 400);
+    }
+
+    await db.insert(answers).values({
+      sessionId: session.id,
+      questionId: currentQuestion.question.id,
+      answerText: answer,
+      timeTaken: Math.floor(timeForCurrentQ),
+      submittedAt: serverNow,
+      evaluated: false
+    });
+
+    const nextQuestionIndex = question_index + 1;
+    const isComplete = nextQuestionIndex >= questions.length;
+
+    await db.update(interviewSessions)
+      .set({
+        currentQuestionIndex: nextQuestionIndex,
+        status: isComplete ? 'completed' : 'in_progress',
+        completedAt: isComplete ? serverNow : null
+      })
+      .where(eq(interviewSessions.id, session.id));
+
+    if (isComplete) {
+      return c.json({
+        success: true,
+        completed: true,
+        message: "Interview completed! Results will be available soon.",
+        finalStats: {
+          totalQuestions: questions.length,
+          totalTime: Math.floor(totalElapsed),
+          completedAt: serverNow.toISOString()
+        }
+      });
+    }
+
+    const nextQuestion = questions[nextQuestionIndex];
+    if (!nextQuestion) {
+      return c.json({ error: "Next question not found" }, 500);
+    }
+
+    return c.json({
+      success: true,
+      completed: false,
+      nextQuestionIndex,
+      nextQuestion: {
+        questionIndex: nextQuestionIndex,
+        question: {
+          id: nextQuestion.question.id,
+          type: nextQuestion.question.type,
+          difficulty: nextQuestion.question.difficulty,
+          questionText: nextQuestion.question.questionText,
+          options: nextQuestion.question.options,
+          starterCode: nextQuestion.question.starterCode,
+          timeLimit: nextQuestion.question.timeLimit
+        },
+        points: nextQuestion.points
+      },
+      timeLimit: nextQuestion.question.timeLimit,
+      serverTime: serverNow.toISOString()
     });
   });
 
