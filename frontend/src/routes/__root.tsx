@@ -1,29 +1,20 @@
 import {
   createRootRouteWithContext,
-  Link,
   Outlet,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type { QueryClient } from "@tanstack/react-query";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 
 interface MyRouterContext {
   queryClient: QueryClient;
 }
 
 const RootLayout = () => (
-  <>
-    <div className="p-2 flex gap-2">
-      <Link to="/" className="[&.active]:font-bold">
-        Home
-      </Link>{" "}
-      <Link to="/about" className="[&.active]:font-bold">
-        About
-      </Link>
-    </div>
-    <hr />
+  <ThemeProvider defaultTheme="system" storageKey="crisp-ui-theme">
     <Outlet />
     <TanStackRouterDevtools />
-  </>
+  </ThemeProvider>
 );
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
