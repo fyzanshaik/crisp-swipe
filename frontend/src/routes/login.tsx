@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,21 @@ import { Brain, Loader2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { useAuth } from "@/lib/use-auth";
+import { z } from "zod";
+
+const loginSearchSchema = z.object({
+  redirect: z.string().optional(),
+});
 
 export const Route = createFileRoute("/login")({
+  validateSearch: loginSearchSchema,
   component: Login,
 });
 
 function Login() {
-    // const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const auth = useAuth();
+  const search = Route.useSearch();
   
   const form = useForm({
     defaultValues: {
@@ -33,7 +40,14 @@ function Login() {
       },
     },
     onSubmit: async ({ value }) => {
-           await login(value.email, value.password);
+      await auth.login(value.email, value.password);
+      
+      if (search.redirect) {
+        navigate({ to: search.redirect });
+      } else {
+        // Force a page reload to ensure auth state is properly updated
+        window.location.href = '/dashboard';
+      }
     },
   });
 
@@ -42,8 +56,14 @@ function Login() {
     form.setFieldValue('password', password);
     
          try {
-           await login(email, password);
-           // Redirect will be handled by the auth context
+           await auth.login(email, password);
+           
+           if (search.redirect) {
+             navigate({ to: search.redirect });
+           } else {
+             // Force a page reload to ensure auth state is properly updated
+             window.location.href = '/dashboard';
+           }
          } catch (error) {
            console.error('Auto-login failed:', error);
          }
@@ -129,9 +149,9 @@ function Login() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={!canSubmit || isSubmitting || isLoading}
+                    disabled={!canSubmit || isSubmitting || auth.isLoading}
                   >
-                    {isSubmitting || isLoading ? (
+                    {isSubmitting || auth.isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Signing in...
@@ -161,9 +181,9 @@ function Login() {
                   variant="outline"
                   onClick={() => handleAutoLogin("swipeuser@gmail.com", "11111111")}
                   className="text-sm"
-                  disabled={isLoading}
+                  disabled={auth.isLoading}
                 >
-                  {isLoading ? (
+                  {auth.isLoading ? (
                     <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                   ) : null}
                   Swipe Candidate
@@ -172,9 +192,9 @@ function Login() {
                   variant="outline"
                   onClick={() => handleAutoLogin("swipeadmin@gmail.com", "11111111")}
                   className="text-sm"
-                  disabled={isLoading}
+                  disabled={auth.isLoading}
                 >
-                  {isLoading ? (
+                  {auth.isLoading ? (
                     <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                   ) : null}
                   Swipe Recruiter

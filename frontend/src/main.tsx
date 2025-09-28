@@ -8,31 +8,16 @@ import { useAuth } from "@/lib/use-auth";
 import "./index.css";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+
 scan({
   enabled: true,
 });
 
 const queryClient = new QueryClient();
-const router = createRouter({ 
-  routeTree, 
-  context: { 
-    queryClient,
-    auth: {
-      user: null,
-      isAuthenticated: false,
-      isLoading: true,
-    }
-  } 
-});
 
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router;
-  }
-}
 export function InnerApp() {
   return (
-    <AuthProvider router={router}>
+    <AuthProvider>
       <RouterProviderWithAuth />
     </AuthProvider>
   );
@@ -41,19 +26,21 @@ export function InnerApp() {
 function RouterProviderWithAuth() {
   const { user, isAuthenticated, isLoading } = useAuth();
   
-  const routerContext = useMemo(() => ({
-    queryClient,
-    auth: {
-      user,
-      isAuthenticated,
-      isLoading,
-    }
+  const router = useMemo(() => createRouter({ 
+    routeTree, 
+    context: { 
+      queryClient,
+      auth: {
+        user,
+        isAuthenticated,
+        isLoading,
+      }
+    } 
   }), [user, isAuthenticated, isLoading]);
   
   return (
     <RouterProvider 
       router={router} 
-      context={routerContext} 
     />
   );
 }

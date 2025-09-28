@@ -3,13 +3,19 @@ import { useAuth } from "@/lib/use-auth";
 import { Brain, LogOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { userQueryOptions } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: ({ context }) => {
-    if (!context.auth.isAuthenticated) {
-      throw redirect({
-        to: "/login",
-      });
+  beforeLoad: async ({ context, location }) => {
+    const { queryClient } = context;
+    try {
+      const data = await queryClient.ensureQueryData(userQueryOptions);
+      if (!data?.user) {
+        throw redirect({ to: "/login", search: { redirect: location.href } });
+      }
+    } catch (e) {
+      console.error("Authentication check failed", e);
+      throw redirect({ to: "/login", search: { redirect: location.href } });
     }
   },
   component: AuthenticatedLayout,

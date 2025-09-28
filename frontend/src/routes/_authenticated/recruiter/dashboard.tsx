@@ -1,11 +1,17 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/use-auth";
+import { recruiterApi } from "@/lib/recruiter-api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, BarChart3, Settings, Plus, Eye } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/recruiter/dashboard")({
   beforeLoad: ({ context }) => {
+    if (context.auth.isLoading) {
+      return;
+    }
+    
     if (context.auth.user?.role !== "recruiter") {
       throw redirect({
         to: "/candidate/dashboard",
@@ -17,6 +23,33 @@ export const Route = createFileRoute("/_authenticated/recruiter/dashboard")({
 
 function RecruiterDashboard() {
   const { user } = useAuth();
+  
+  const { data: dashboardData, isLoading, error } = useQuery({
+    queryKey: ["recruiter", "dashboard"],
+    queryFn: recruiterApi.getDashboard,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Recruiter Dashboard</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Recruiter Dashboard</h1>
+          <p className="text-red-500">Error loading dashboard data</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -41,7 +74,7 @@ function RecruiterDashboard() {
           <CardContent>
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                12 candidates in your pool
+                {dashboardData?.stats.totalCandidates || 0} candidates in your pool
               </p>
               <Button size="sm" disabled>
                 <Eye className="mr-2 h-4 w-4" />
@@ -64,7 +97,7 @@ function RecruiterDashboard() {
           <CardContent>
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                3 interviews in progress
+                {dashboardData?.stats.activeInterviews || 0} interviews in progress
               </p>
               <Button size="sm" disabled>
                 <Eye className="mr-2 h-4 w-4" />
@@ -109,11 +142,11 @@ function RecruiterDashboard() {
             <div className="space-y-2">
               <div className="text-sm">
                 <span className="font-medium">Total Interviews</span>
-                <span className="text-muted-foreground ml-2">47</span>
+                <span className="text-muted-foreground ml-2">{dashboardData?.stats.totalInterviews || 0}</span>
               </div>
               <div className="text-sm">
-                <span className="font-medium">Success Rate</span>
-                <span className="text-muted-foreground ml-2">78%</span>
+                <span className="font-medium">Average Score</span>
+                <span className="text-muted-foreground ml-2">{dashboardData?.stats.avgScore || 0}%</span>
               </div>
             </div>
           </CardContent>

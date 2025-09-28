@@ -7,11 +7,26 @@ import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/candidate/dashboard")({
   beforeLoad: ({ context }) => {
+    console.log("Candidate dashboard beforeLoad:", {
+      isLoading: context.auth.isLoading,
+      isAuthenticated: context.auth.isAuthenticated,
+      userRole: context.auth.user?.role,
+      user: context.auth.user
+    });
+    
+    if (context.auth.isLoading) {
+      console.log("Auth is loading, waiting...");
+      return;
+    }
+    
     if (context.auth.user?.role !== "candidate") {
+      console.log("User is not a candidate, redirecting to recruiter dashboard");
       throw redirect({
         to: "/recruiter/dashboard",
       });
     }
+    
+    console.log("User is a candidate, allowing access");
   },
   component: CandidateDashboard,
 });

@@ -5,12 +5,9 @@ import { AuthContext } from "./auth-context";
 
 interface AuthProviderProps {
   children: ReactNode;
-  router?: {
-    navigate: (options: { to: string }) => void;
-  };
 }
 
-export function AuthProvider({ children, router }: AuthProviderProps) {
+export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
 
   const {
@@ -29,22 +26,12 @@ export function AuthProvider({ children, router }: AuthProviderProps) {
     const res = await api.auth.login.$post({ json: { email, password } });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? error.error : 'Login failed');
+      throw new Error('error' in error ? String(error.error) : 'Login failed');
     }
 
-    await queryClient.invalidateQueries({ queryKey: ["get-current-user"] });
-    await queryClient.refetchQueries({
-      queryKey: ["get-current-user"],
-      type: 'active'
-    });
-
-    const userData = await queryClient.fetchQuery(userQueryOptions);
-    if (userData?.user && router) {
-      const dashboardPath = userData.user.role === 'candidate' 
-        ? '/candidate/dashboard' 
-        : '/recruiter/dashboard';
-      router.navigate({ to: dashboardPath });
-    }
+    await queryClient.invalidateQueries({ queryKey: userQueryOptions.queryKey });
+    await queryClient.ensureQueryData(userQueryOptions);
+    
   };
 
   const register = async (data: {
@@ -57,22 +44,12 @@ export function AuthProvider({ children, router }: AuthProviderProps) {
     const res = await api.auth.register.$post({ json: data });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? error.error : 'Registration failed');
+      throw new Error('error' in error ? String(error.error) : 'Registration failed');
     }
 
-    await queryClient.invalidateQueries({ queryKey: ["get-current-user"] });
-    await queryClient.refetchQueries({
-      queryKey: ["get-current-user"],
-      type: 'active'
-    });
-
-    const userData = await queryClient.fetchQuery(userQueryOptions);
-    if (userData?.user && router) {
-      const dashboardPath = userData.user.role === 'candidate' 
-        ? '/candidate/dashboard' 
-        : '/recruiter/dashboard';
-      router.navigate({ to: dashboardPath });
-    }
+    await queryClient.invalidateQueries({ queryKey: userQueryOptions.queryKey });
+    await queryClient.ensureQueryData(userQueryOptions);
+    
   };
 
   const logout = async () => {
@@ -81,12 +58,10 @@ export function AuthProvider({ children, router }: AuthProviderProps) {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      queryClient.setQueryData(["get-current-user"], null);
-      queryClient.removeQueries({ queryKey: ["get-current-user"] });
-      
-      if (router) {
-        router.navigate({ to: "/" });
-      }
+      queryClient.setQueryData(userQueryOptions.queryKey, undefined);
+      queryClient.removeQueries({ queryKey: userQueryOptions.queryKey });
+      // Force a page reload to clear all state and redirect to home
+      window.location.href = '/';
     }
   };
 

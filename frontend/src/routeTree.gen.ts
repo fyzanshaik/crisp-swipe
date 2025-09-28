@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRecruiterDashboardRouteImport } from './routes/_authenticated/recruiter/dashboard'
 import { Route as AuthenticatedCandidateDashboardRouteImport } from './routes/_authenticated/candidate/dashboard'
 import { Route as AuthenticatedCandidateInterviewIdRouteImport } from './routes/_authenticated/candidate/interview.$id'
@@ -27,11 +27,6 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -47,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedRecruiterDashboardRoute =
   AuthenticatedRecruiterDashboardRouteImport.update({
@@ -70,9 +70,9 @@ const AuthenticatedCandidateInterviewIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
   '/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
   '/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
@@ -80,9 +80,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
   '/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
   '/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
@@ -92,9 +92,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/about': typeof AboutRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
   '/_authenticated/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
   '/_authenticated/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
@@ -104,9 +104,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
-    | '/dashboard'
     | '/login'
     | '/register'
+    | '/dashboard'
     | '/candidate/dashboard'
     | '/recruiter/dashboard'
     | '/candidate/interview/$id'
@@ -114,9 +114,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
-    | '/dashboard'
     | '/login'
     | '/register'
+    | '/dashboard'
     | '/candidate/dashboard'
     | '/recruiter/dashboard'
     | '/candidate/interview/$id'
@@ -125,9 +125,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/about'
-    | '/dashboard'
     | '/login'
     | '/register'
+    | '/_authenticated/dashboard'
     | '/_authenticated/candidate/dashboard'
     | '/_authenticated/recruiter/dashboard'
     | '/_authenticated/candidate/interview/$id'
@@ -137,7 +137,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AboutRoute: typeof AboutRoute
-  DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
 }
@@ -156,13 +155,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -185,6 +177,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/recruiter/dashboard': {
       id: '/_authenticated/recruiter/dashboard'
@@ -211,12 +210,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedCandidateDashboardRoute: typeof AuthenticatedCandidateDashboardRoute
   AuthenticatedRecruiterDashboardRoute: typeof AuthenticatedRecruiterDashboardRoute
   AuthenticatedCandidateInterviewIdRoute: typeof AuthenticatedCandidateInterviewIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedCandidateDashboardRoute: AuthenticatedCandidateDashboardRoute,
   AuthenticatedRecruiterDashboardRoute: AuthenticatedRecruiterDashboardRoute,
   AuthenticatedCandidateInterviewIdRoute:
@@ -231,7 +232,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AboutRoute: AboutRoute,
-  DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
 }
