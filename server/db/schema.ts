@@ -120,6 +120,7 @@ export const interviewSessions = pgTable('interview_sessions', {
   percentage: decimal('percentage', { precision: 5, scale: 2 }),
   aiSummary: text('ai_summary'),
   evaluatedAt: timestamp('evaluated_at'),
+  recruiterNotes: text('recruiter_notes'),
   
   createdAt: timestamp('created_at').defaultNow()
 }, (table) => ({
