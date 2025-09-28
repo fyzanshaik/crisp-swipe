@@ -5,9 +5,11 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/ui/theme-provider";
+import type { AuthState } from "@/lib/auth-types";
 
 interface MyRouterContext {
   queryClient: QueryClient;
+  auth: AuthState;
 }
 
 const RootLayout = () => (

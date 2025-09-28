@@ -7,4 +7,10 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL!,
 });
 
+/**
+ * To seed the database with demo data, run the following command:
+ * Candidate: swipeuser@gmail.com / 11111111
+ * Recruiter: swipeadmin@gmail.com / 11111111
+ */
+
 export const db = drizzle({ client: pool, schema });

@@ -1,14 +1,79 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Brain } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useForm } from "@tanstack/react-form";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/login")({
   component: Login,
 });
 
 function Login() {
+  const navigate = useNavigate();
+  
+  const form = useForm({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+    validators: {
+      onChange: ({ value }) => {
+        if (!value.email || !value.email.includes("@")) {
+          return "Please enter a valid email";
+        }
+        if (!value.password || value.password.length < 1) {
+          return "Password is required";
+        }
+        return undefined;
+      },
+    },
+    onSubmit: async ({ value }) => {
+      const res = await api.auth.login.$post({ json: value });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error('error' in error ? error.error : 'Login failed');
+      }
+      
+      // Navigate based on user role
+      const userData = await res.json();
+      if (userData.user.role === 'candidate') {
+        navigate({ to: "/" }); // TODO: Navigate to candidate dashboard when created
+      } else if (userData.user.role === 'recruiter') {
+        navigate({ to: "/" }); // TODO: Navigate to recruiter dashboard when created
+      } else {
+        navigate({ to: "/" });
+      }
+    },
+  });
+
+  const handleAutoLogin = async (email: string, password: string) => {
+    form.setFieldValue('email', email);
+    form.setFieldValue('password', password);
+    
+    try {
+      const res = await api.auth.login.$post({ json: { email, password } });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error('error' in error ? error.error : 'Auto-login failed');
+      }
+      
+      const userData = await res.json();
+      if (userData.user.role === 'candidate') {
+        navigate({ to: "/" }); // TODO: Navigate to candidate dashboard when created
+      } else if (userData.user.role === 'recruiter') {
+        navigate({ to: "/" }); // TODO: Navigate to recruiter dashboard when created
+      } else {
+        navigate({ to: "/" });
+      }
+    } catch (error) {
+      console.error('Auto-login failed:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -29,8 +94,105 @@ function Login() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">Login form will be implemented next</p>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.handleSubmit();
+              }}
+            >
+              <form.Field
+                name="email"
+                children={(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor={field.name}>Email</Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type="email"
+                      placeholder="Enter your email"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
+                    {!field.state.meta.isValid && (
+                      <em className="text-red-500 text-sm">
+                        {field.state.meta.errors.join(", ")}
+                      </em>
+                    )}
+                  </div>
+                )}
+              />
+              
+              <form.Field
+                name="password"
+                children={(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor={field.name}>Password</Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type="password"
+                      placeholder="Enter your password"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
+                    {!field.state.meta.isValid && (
+                      <em className="text-red-500 text-sm">
+                        {field.state.meta.errors.join(", ")}
+                      </em>
+                    )}
+                  </div>
+                )}
+              />
+              
+              <form.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                children={([canSubmit, isSubmitting]) => (
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={!canSubmit || isSubmitting}
+                  >
+                    {isSubmitting ? "Signing in..." : "Sign In"}
+                  </Button>
+                )}
+              />
+            </form>
+            
+            <div className="mt-6 space-y-3">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or try demo accounts
+                  </span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleAutoLogin("swipeuser@gmail.com", "11111111")}
+                  className="text-sm"
+                >
+                  Swipe Candidate
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleAutoLogin("swipeadmin@gmail.com", "11111111")}
+                  className="text-sm"
+                >
+                  Swipe Recruiter
+                </Button>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-center">
               <Button asChild variant="outline">
                 <Link to="/">Back to Home</Link>
               </Button>
