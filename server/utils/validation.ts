@@ -6,7 +6,7 @@ export const createInterviewSchema = z.object({
   jobRole: z.string().min(1).max(100),
   isPublic: z.boolean().default(false),
   assignedEmails: z.array(z.string().email()).optional(),
-  deadline: z.string().datetime().optional()
+  deadline: z.string().datetime().transform(str => new Date(str)).optional()
 });
 
 export const updateInterviewSchema = createInterviewSchema.partial();
