@@ -370,6 +370,28 @@ export const recruiterRoute = new Hono()
       return c.json({ error: "Interview not found" }, 404);
     }
 
+    // Validate for duplicate questions on the server side
+    const questionIds = questionAssignments.map(q => q.questionId);
+    const uniqueQuestionIds = new Set(questionIds);
+    
+    if (questionIds.length !== uniqueQuestionIds.size) {
+      console.error('❌ Duplicate questions detected in assignment:', questionIds);
+      return c.json({ 
+        error: "Cannot assign the same question multiple times to an interview" 
+      }, 400);
+    }
+
+    // Validate for duplicate order indices
+    const orderIndices = questionAssignments.map(q => q.orderIndex);
+    const uniqueOrderIndices = new Set(orderIndices);
+    
+    if (orderIndices.length !== uniqueOrderIndices.size) {
+      console.error('❌ Duplicate order indices detected:', orderIndices);
+      return c.json({ 
+        error: "Each question must have a unique position in the interview" 
+      }, 400);
+    }
+
     await db.delete(interviewQuestions).where(eq(interviewQuestions.interviewId, interviewId));
 
     const assignments = questionAssignments.map(q => ({
@@ -379,9 +401,22 @@ export const recruiterRoute = new Hono()
       points: q.points
     }));
 
-    await db.insert(interviewQuestions).values(assignments);
-
-    return c.json({ message: "Questions assigned successfully" });
+    try {
+      await db.insert(interviewQuestions).values(assignments);
+      console.log('✅ Questions assigned successfully:', assignments.map(a => ({ questionId: a.questionId, orderIndex: a.orderIndex })));
+      return c.json({ message: "Questions assigned successfully" });
+    } catch (error: any) {
+      console.error('❌ Database error when assigning questions:', error);
+      
+      // Handle database constraint violations gracefully
+      if (error.message?.includes('unique') || error.code === '23505') {
+        return c.json({ 
+          error: "Database constraint violation: Cannot assign duplicate questions or positions" 
+        }, 400);
+      }
+      
+      return c.json({ error: "Failed to assign questions to interview" }, 500);
+    }
   })
   .get("/dashboard", async (c) => {
     const user = c.get('user');

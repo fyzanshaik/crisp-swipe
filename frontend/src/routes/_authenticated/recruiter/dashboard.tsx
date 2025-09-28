@@ -14,6 +14,7 @@ import {
   DeleteConfirmDialog,
   ViewInterviewModal,
   EditInterviewModal,
+  CreateInterviewModal,
   type Interview,
   type InterviewsData
 } from "@/components/recruiter";
@@ -41,6 +42,8 @@ function RecruiterDashboard() {
     open: boolean;
     interview: Interview | null;
   }>({ open: false, interview: null });
+
+  const [createModal, setCreateModal] = useState(false);
 
   const [viewModal, setViewModal] = useState<{
     open: boolean;
@@ -268,6 +271,12 @@ function RecruiterDashboard() {
     }
   }, []);
 
+  const handleInterviewCreated = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["recruiter", "dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["recruiter", "interviews"] });
+    toast.success("Interview created successfully!");
+  }, [queryClient]);
+
   if (dashboardLoading || interviewsLoading) {
     return (
       <div className="flex-1 space-y-6 p-6">
@@ -306,7 +315,7 @@ function RecruiterDashboard() {
             Welcome back, {user?.name}! Here's what's happening with your interviews.
           </p>
         </div>
-        <Button size="lg" className="h-10">
+        <Button size="lg" className="h-10" onClick={() => setCreateModal(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Create Interview
         </Button>
@@ -397,6 +406,12 @@ function RecruiterDashboard() {
         interview={editModal.interview}
         onSave={handleSaveEdit}
         onPublish={handlePublish}
+      />
+
+      <CreateInterviewModal
+        open={createModal}
+        onOpenChange={setCreateModal}
+        onInterviewCreated={handleInterviewCreated}
       />
     </div>
   );

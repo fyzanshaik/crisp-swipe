@@ -77,7 +77,6 @@ export const EditInterviewModal = memo<EditInterviewModalProps>(
         return;
       }
 
-      // Save changes first, then publish
       handleSave();
       setTimeout(() => {
         onPublish(interview.id);
@@ -100,7 +99,6 @@ export const EditInterviewModal = memo<EditInterviewModalProps>(
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Interview Title */}
             <div className="space-y-2">
               <Label htmlFor="title">Interview Title *</Label>
               <Input
@@ -111,7 +109,6 @@ export const EditInterviewModal = memo<EditInterviewModalProps>(
               />
             </div>
 
-            {/* Job Role */}
             <div className="space-y-2">
               <Label htmlFor="jobRole">Job Role *</Label>
               <Input
@@ -122,7 +119,6 @@ export const EditInterviewModal = memo<EditInterviewModalProps>(
               />
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <textarea
@@ -134,7 +130,6 @@ export const EditInterviewModal = memo<EditInterviewModalProps>(
               />
             </div>
 
-            {/* Access Type */}
             <div className="space-y-3">
               <Label className="text-base">Interview Access</Label>
               <div className="space-y-2">
@@ -190,7 +185,6 @@ export const EditInterviewModal = memo<EditInterviewModalProps>(
               </div>
             </div>
 
-            {/* Deadline */}
             <div className="space-y-2">
               <Label htmlFor="deadline" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -205,7 +199,6 @@ export const EditInterviewModal = memo<EditInterviewModalProps>(
               />
             </div>
 
-            {/* Status Info */}
             <div className={`p-4 rounded-lg border ${
               interview.status === 'published' ? 'bg-green-50 border-green-200' :
               interview.status === 'draft' ? 'bg-blue-50 border-blue-200' :
@@ -219,11 +212,11 @@ export const EditInterviewModal = memo<EditInterviewModalProps>(
                   interview.status === 'closed' ? 'bg-red-500' :
                   'bg-gray-400'
                 }`} />
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium text-black">
                   Status: {interview.status === 'published' ? 'Active' : interview.status === 'draft' ? 'Draft' : interview.status || 'Unknown'}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-black">
                 {interview.status === 'draft' && "Interview is saved as draft. Publish to make it available to candidates."}
                 {interview.status === 'published' && "Interview is live and accepting candidates."}
                 {interview.status === 'closed' && "Interview is closed. No new candidates can apply."}

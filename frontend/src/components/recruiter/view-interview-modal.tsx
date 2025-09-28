@@ -41,7 +41,7 @@ export const ViewInterviewModal = memo<ViewInterviewModalProps>(
         await navigator.clipboard.writeText(link);
         toast.success("Interview link copied to clipboard");
       } catch (err) {
-        toast.error("Failed to copy link");
+        toast.error("Failed to copy link "+err);
       }
     }, [interview]);
 
@@ -111,7 +111,6 @@ export const ViewInterviewModal = memo<ViewInterviewModalProps>(
               </div>
             </div>
 
-            {/* Deadline */}
             <div className="border rounded-lg p-4 bg-muted/30">
               <div className="flex items-center gap-2 text-sm mb-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -122,7 +121,6 @@ export const ViewInterviewModal = memo<ViewInterviewModalProps>(
               </p>
             </div>
 
-            {/* Share Link */}
             {interview.status === 'published' && (
               <div className="border rounded-lg p-4 bg-primary/5 border-primary/20">
                 <div className="flex items-center gap-2 text-sm mb-2">

@@ -60,7 +60,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       queryClient.setQueryData(userQueryOptions.queryKey, undefined);
       queryClient.removeQueries({ queryKey: userQueryOptions.queryKey });
-      // Force a page reload to clear all state and redirect to home
       window.location.href = '/';
     }
   };
