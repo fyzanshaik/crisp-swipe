@@ -3,8 +3,8 @@ import { zValidator } from "@hono/zod-validator";
 import { eq, desc } from "drizzle-orm";
 import { requireRecruiter } from "../middleware/recruiter-auth";
 import { db } from "../db/db";
-import { interviews, questions, interviewQuestions } from "../db/schema";
-import { createInterviewSchema, updateInterviewSchema, createQuestionSchema, generateQuestionsSchema, regenerateQuestionSchema, assignQuestionsSchema } from "../utils/validation";
+import { interviews, questions, interviewQuestions, interviewSessions } from "../db/schema";
+import { createInterviewSchema, updateInterviewSchema, createQuestionSchema, generateQuestionsSchema, regenerateQuestionSchema, assignQuestionsSchema, updateNotesSchema } from "../utils/validation";
 import { generateAllQuestionsPlaceholder, regenerateQuestionPlaceholder } from "../utils/ai-placeholders";
 
 export const recruiterRoute = new Hono()
@@ -381,4 +381,224 @@ export const recruiterRoute = new Hono()
     await db.insert(interviewQuestions).values(assignments);
 
     return c.json({ message: "Questions assigned successfully" });
+  })
+  .get("/dashboard", async (c) => {
+    const user = c.get('user');
+
+    const totalInterviews = await db.query.interviews.findMany({
+      where: eq(interviews.createdBy, user.userId)
+    });
+
+    const activeInterviews = totalInterviews.filter(i => i.status === 'published');
+
+    const allSessions = await db.query.interviewSessions.findMany({
+      with: {
+        interview: {
+          columns: { createdBy: true }
+        }
+      }
+    });
+
+    const userSessions = allSessions.filter(s => s.interview?.createdBy === user.userId);
+    const completedSessions = userSessions.filter(s => s.status === 'completed' && s.finalScore !== null);
+
+    const avgScore = completedSessions.length > 0
+      ? Math.round(completedSessions.reduce((sum, s) => sum + (s.finalScore || 0), 0) / completedSessions.length)
+      : 0;
+
+    const recentInterviews = totalInterviews
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 5);
+
+    const recentCandidates = userSessions
+      .filter(s => s.status === 'completed')
+      .sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime())
+      .slice(0, 5);
+
+    return c.json({
+      stats: {
+        totalInterviews: totalInterviews.length,
+        activeInterviews: activeInterviews.length,
+        totalCandidates: userSessions.length,
+        avgScore
+      },
+      recentInterviews,
+      recentCandidates
+    });
+  })
+  .get("/interviews/:id/candidates", async (c) => {
+    const user = c.get('user');
+    const interviewId = c.req.param('id');
+
+    const interview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, interviewId)
+    });
+
+    if (!interview || interview.createdBy !== user.userId) {
+      return c.json({ error: "Interview not found" }, 404);
+    }
+
+    const candidates = await db.query.interviewSessions.findMany({
+      where: eq(interviewSessions.interviewId, interviewId),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        resume: {
+          columns: {
+            fileName: true,
+            extractedName: true,
+            extractedEmail: true,
+            extractedPhone: true
+          }
+        }
+      },
+      orderBy: [desc(interviewSessions.finalScore)]
+    });
+
+    return c.json({ candidates });
+  })
+  .get("/candidates/:sessionId", async (c) => {
+    const user = c.get('user');
+    const sessionId = c.req.param('sessionId');
+
+    const candidateSession = await db.query.interviewSessions.findFirst({
+      where: eq(interviewSessions.id, sessionId),
+      with: {
+        interview: true,
+        user: {
+          columns: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        resume: true,
+        answers: {
+          with: {
+            question: true
+          },
+          orderBy: (answers, { asc }) => [asc(answers.submittedAt)]
+        }
+      }
+    });
+
+    if (!candidateSession || candidateSession.interview?.createdBy !== user.userId) {
+      return c.json({ error: "Candidate session not found" }, 404);
+    }
+
+    return c.json({ candidate: candidateSession });
+  })
+  .put("/candidates/:sessionId/notes", zValidator("json", updateNotesSchema), async (c) => {
+    const user = c.get('user');
+    const sessionId = c.req.param('sessionId');
+    const { recruiterNotes } = c.req.valid("json");
+
+    const candidateSession = await db.query.interviewSessions.findFirst({
+      where: eq(interviewSessions.id, sessionId),
+      with: {
+        interview: {
+          columns: { createdBy: true }
+        }
+      }
+    });
+
+    if (!candidateSession || candidateSession.interview?.createdBy !== user.userId) {
+      return c.json({ error: "Candidate session not found" }, 404);
+    }
+
+    const updatedSession = await db.update(interviewSessions)
+      .set({ recruiterNotes })
+      .where(eq(interviewSessions.id, sessionId))
+      .returning();
+
+    if (!updatedSession || updatedSession.length === 0) {
+      return c.json({ error: "Failed to update notes" }, 500);
+    }
+
+    return c.json({ session: updatedSession[0] });
+  })
+  .put("/interviews/:id/deadline", zValidator("json", z.object({ deadline: z.string().datetime().transform(str => new Date(str)) })), async (c) => {
+    const user = c.get('user');
+    const interviewId = c.req.param('id');
+    const { deadline } = c.req.valid("json");
+
+    const existingInterview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, interviewId)
+    });
+
+    if (!existingInterview || existingInterview.createdBy !== user.userId) {
+      return c.json({ error: "Interview not found" }, 404);
+    }
+
+    const updatedInterview = await db.update(interviews)
+      .set({ deadline, updatedAt: new Date() })
+      .where(eq(interviews.id, interviewId))
+      .returning();
+
+    if (!updatedInterview || updatedInterview.length === 0) {
+      return c.json({ error: "Failed to update deadline" }, 500);
+    }
+
+    return c.json({ interview: updatedInterview[0] });
+  })
+  .post("/interviews/:id/assign", zValidator("json", z.object({ emails: z.array(z.string().email()) })), async (c) => {
+    const user = c.get('user');
+    const interviewId = c.req.param('id');
+    const { emails } = c.req.valid("json");
+
+    const existingInterview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, interviewId)
+    });
+
+    if (!existingInterview || existingInterview.createdBy !== user.userId) {
+      return c.json({ error: "Interview not found" }, 404);
+    }
+
+    const currentEmails = existingInterview.assignedEmails || [];
+    const newEmails = [...new Set([...currentEmails, ...emails])];
+
+    const updatedInterview = await db.update(interviews)
+      .set({
+        assignedEmails: newEmails,
+        isPublic: false,
+        updatedAt: new Date()
+      })
+      .where(eq(interviews.id, interviewId))
+      .returning();
+
+    if (!updatedInterview || updatedInterview.length === 0) {
+      return c.json({ error: "Failed to assign candidates" }, 500);
+    }
+
+    return c.json({ interview: updatedInterview[0] });
+  })
+  .get("/interviews/:id/link", async (c) => {
+    const user = c.get('user');
+    const interviewId = c.req.param('id');
+
+    const interview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, interviewId)
+    });
+
+    if (!interview || interview.createdBy !== user.userId) {
+      return c.json({ error: "Interview not found" }, 404);
+    }
+
+    if (interview.status !== 'published') {
+      return c.json({ error: "Interview must be published to get link" }, 400);
+    }
+
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const interviewLink = `${baseUrl}/interview/${interviewId}`;
+
+    return c.json({
+      link: interviewLink,
+      isPublic: interview.isPublic,
+      assignedEmails: interview.assignedEmails || []
+    });
   });
