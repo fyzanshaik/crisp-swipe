@@ -2,9 +2,8 @@
 
 ---
 
-## Phase 1: Foundation & Setup (Day 1-2)
+## Phase 1: Foundation & Setup 
 
-### Day 1: Project Setup
 
 **Backend:**
 
@@ -29,11 +28,10 @@
 - [ ] Test auth flow (register → login → protected route)
 - [ ] Verify database connection and migrations
 
-**Time Estimate:** 6-8 hours
 
 ---
 
-### Day 2: Core Authentication & UI Foundation
+### Core Authentication & UI Foundation
 
 **Backend:**
 
@@ -56,13 +54,12 @@
 - [ ] Test role-based access control
 - [ ] Test token persistence & refresh on page reload
 
-**Time Estimate:** 6-8 hours
 
 ---
 
-## Phase 2: Question System (Day 2-3)
+## Phase 2: Question System 
 
-### Day 2 (continued): AI Question Generation
+###  AI Question Generation
 
 **Backend:**
 
@@ -88,11 +85,10 @@
 - [ ] Verify all question types (MCQ, Short Answer, Code)
 - [ ] Test regeneration with feedback
 
-**Time Estimate:** 4-6 hours
 
 ---
 
-### Day 3: Interview Creation Flow
+###  Interview Creation Flow
 
 **Backend:**
 
@@ -119,13 +115,12 @@
 - [ ] Publish as private with assigned emails
 - [ ] Verify question order
 
-**Time Estimate:** 6-8 hours
 
 ---
 
-## Phase 3: Interview Flow & Timer System (Day 3-4)
+## Phase 3: Interview Flow & Timer System 
 
-### Day 3 (continued): Resume Upload & Parsing
+###  Resume Upload & Parsing
 
 **Backend:**
 
@@ -150,11 +145,10 @@
 - [ ] Verify field extraction accuracy
 - [ ] Test missing field collection flow
 
-**Time Estimate:** 4-5 hours
 
 ---
 
-### Day 4: Interview Session & Timer
+###interview Session & Timer
 
 **Backend:**
 
@@ -181,11 +175,10 @@
 - [ ] Test auto-submit when timer expires
 - [ ] Refresh page mid-interview, verify timer resumes correctly
 
-**Time Estimate:** 6-8 hours
 
 ---
 
-### Day 4 (continued): Answer Submission & Resume
+### Answer Submission & Resume
 
 **Backend:**
 
@@ -212,13 +205,11 @@
 - [ ] Refresh mid-interview, verify resume works
 - [ ] Test cross-device resume (different browser)
 
-**Time Estimate:** 4-6 hours
 
 ---
 
-## Phase 4: Evaluation System (Day 4-5)
-
-### Day 5: Background Evaluation
+## Phase 4: Evaluation System
+### Background Evaluation
 
 **Backend:**
 
@@ -244,11 +235,10 @@
 - [ ] Check code AI evaluation
 - [ ] Verify all scores saved correctly
 
-**Time Estimate:** 6-8 hours
 
 ---
 
-### Day 5 (continued): Final Summary Generation
+### Final Summary Generation
 
 **Backend:**
 
@@ -273,13 +263,12 @@
 - [ ] Verify AI summary quality
 - [ ] Check detailed feedback per question
 
-**Time Estimate:** 4-5 hours
 
 ---
 
-## Phase 5: Dashboards & Results (Day 5-6)
+## Phase 5: Dashboards & Results 
 
-### Day 6: Recruiter Dashboard
+### Recruiter Dashboard
 
 **Backend:**
 
@@ -308,11 +297,10 @@
 - [ ] Test search functionality
 - [ ] View detailed candidate results
 
-**Time Estimate:** 6-8 hours
 
 ---
 
-### Day 6 (continued): Candidate Dashboard
+### : Candidate Dashboard
 
 **Backend:**
 
@@ -336,13 +324,12 @@
 - [ ] Complete interview, see it in completed section
 - [ ] Test expired interview handling
 
-**Time Estimate:** 4-5 hours
 
 ---
 
-## Phase 6: Polish & Deployment (Day 6-7)
+## Phase 6: Polish & Deployment 
 
-### Day 7: Error Handling & Edge Cases
+###  Error Handling & Edge Cases
 
 **Backend:**
 
@@ -368,11 +355,10 @@
 - [ ] Test API failures
 - [ ] Test validation errors
 
-**Time Estimate:** 4-5 hours
 
 ---
 
-### Day 7 (continued): Responsive Design & UX
+### Responsive Design & UX
 
 **Frontend:**
 
@@ -390,11 +376,10 @@
 - [ ] Keyboard navigation test
 - [ ] Screen reader test (basic)
 
-**Time Estimate:** 3-4 hours
 
 ---
 
-### Day 7 (evening): Deployment
+### Deployment
 
 **Backend:**
 
@@ -422,11 +407,10 @@
 - [ ] Test candidate flow (take interview)
 - [ ] Performance check
 
-**Time Estimate:** 2-3 hours
 
 ---
 
-## Day 7 (final): Documentation & Demo
+## Documentation & Demo
 
 ### README.md
 
@@ -464,11 +448,9 @@
 - [ ] Demo video URL
 - [ ] Submit form: https://forms.gle/Yx5HGCQzHFmHF1wM6
 
-**Time Estimate:** 3-4 hours
 
 ---
 
-## Total Time Estimate: 60-75 hours (6-7 days of full-time work)
 
 ---
 
@@ -529,9 +511,7 @@ If time is constrained, focus on this critical path:
 
 ---
 
-## Daily Checklist
 
-### Every Day:
 
 - [ ] Git commit regularly (feature branches)
 - [ ] Test new features immediately
