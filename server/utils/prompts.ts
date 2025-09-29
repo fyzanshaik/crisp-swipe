@@ -5,9 +5,9 @@ export const GENERATE_QUESTIONS_PROMPT = (jobRole: string, technologies: string[
   return `Generate exactly 6 interview questions for a ${jobRole} position using these technologies: ${techList}
 
 Requirements:
-- 2 Easy MCQ questions (20 seconds each, 10 points each)
-- 2 Medium short answer questions (60 seconds each, 20 points each)
-- 2 Hard coding questions (120 seconds each, 30 points each)
+- 2 Easy MCQ questions (60 seconds each, 10 points each)
+- 2 Medium short answer questions (120 seconds each, 20 points each)
+- 2 Hard coding questions (180 seconds each, 30 points each)
 
 For MCQ questions:
 - Provide exactly 4 options

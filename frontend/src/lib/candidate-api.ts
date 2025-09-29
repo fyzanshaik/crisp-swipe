@@ -9,7 +9,9 @@ export const candidateApi = {
     const res = await api.candidate.dashboard.$get();
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to fetch dashboard');
+      throw new Error(
+        "error" in error ? String(error.error) : "Failed to fetch dashboard",
+      );
     }
     return res.json();
   },
@@ -18,49 +20,71 @@ export const candidateApi = {
     const res = await api.candidate.resumes.$get();
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to fetch resumes');
+      throw new Error(
+        "error" in error ? String(error.error) : "Failed to fetch resumes",
+      );
     }
     return res.json();
   },
 
   uploadResume: async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await api.candidate.resumes.upload.$post({ form: formData });
+    const res = await api.candidate.resumes.upload.$post({
+      form: {
+        file: file,
+      },
+    });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to upload resume');
+      throw new Error(
+        "error" in error ? String(error.error) : "Failed to upload resume",
+      );
     }
     return res.json();
   },
 
-  chatWithResume: async (resumeId: string, messages: Array<{ role: string; content: string }>) => {
+  chatWithResume: async (
+    resumeId: string,
+    messages: Array<{ role: string; content: string }>,
+  ) => {
     const res = await api.candidate.resumes[":id"].chat.$post({
       param: { id: resumeId },
-      json: { messages }
+      json: { messages },
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to process chat');
+      throw new Error(
+        "error" in error ? String(error.error) : "Failed to process chat",
+      );
     }
     return res.json();
   },
 
   getInterviewDetails: async (interviewId: string) => {
-    const res = await api.candidate.interviews[":id"].details.$get({ param: { id: interviewId } });
+    const res = await api.candidate.interviews[":id"].details.$get({
+      param: { id: interviewId },
+    });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to fetch interview details');
+      throw new Error(
+        "error" in error
+          ? String(error.error)
+          : "Failed to fetch interview details",
+      );
     }
     return res.json();
   },
 
   checkResumeEligibility: async (interviewId: string) => {
-    const res = await api.candidate.interviews[":id"]["resume-check"].$get({ param: { id: interviewId } });
+    const res = await api.candidate.interviews[":id"]["resume-check"].$get({
+      param: { id: interviewId },
+    });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to check resume eligibility');
+      throw new Error(
+        "error" in error
+          ? String(error.error)
+          : "Failed to check resume eligibility",
+      );
     }
     return res.json();
   },
@@ -68,11 +92,13 @@ export const candidateApi = {
   startInterview: async (interviewId: string, resumeId: string) => {
     const res = await api.candidate.interviews[":id"].start.$post({
       param: { id: interviewId },
-      json: { resumeId }
+      json: { resumeId },
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to start interview');
+      throw new Error(
+        "error" in error ? String(error.error) : "Failed to start interview",
+      );
     }
     return res.json();
   },
@@ -81,32 +107,45 @@ export const candidateApi = {
     const res = await api.candidate.interviews.active.$get();
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to fetch active session');
+      throw new Error(
+        "error" in error
+          ? String(error.error)
+          : "Failed to fetch active session",
+      );
     }
     return res.json();
   },
 
-  submitAnswer: async (sessionId: string, data: {
-    session_token: string;
-    question_index: number;
-    answer: string;
-  }) => {
+  submitAnswer: async (
+    sessionId: string,
+    data: {
+      session_token: string;
+      question_index: number;
+      answer: string;
+    },
+  ) => {
     const res = await api.candidate.interviews[":sessionId"].answers.$post({
       param: { sessionId },
-      json: data
+      json: data,
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to submit answer');
+      throw new Error(
+        "error" in error ? String(error.error) : "Failed to submit answer",
+      );
     }
     return res.json();
   },
 
   getResults: async (sessionId: string) => {
-    const res = await api.candidate.results[":sessionId"].$get({ param: { sessionId } });
+    const res = await api.candidate.results[":sessionId"].$get({
+      param: { sessionId },
+    });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error('error' in error ? String(error.error) : 'Failed to fetch results');
+      throw new Error(
+        "error" in error ? String(error.error) : "Failed to fetch results",
+      );
     }
     return res.json();
   },

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+echo "Testing NEW interview with 60s/120s/180s limits"
+echo "Interview ID: ac79db2b-1b40-4dcc-856d-cc46260bbc17"
+echo ""
+echo "1. Frontend: Navigate to /candidate/interview-taking/ac79db2b-1b40-4dcc-856d-cc46260bbc17"
+echo "2. Select resume and start interview"
+echo "3. Check:"
+echo "   - Q0 time limit shows 60s"
+echo "   - Submit button disabled until 30s (50% of 60s)"
+echo "   - Timer counts down properly"
+echo "   - No network spam in devtools"
+echo "   - After 30s, button enables"
+echo "   - Submission works"
+echo ""
+echo "Backend ready - just test in browser now!"

@@ -17,7 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRecruiterDashboardRouteImport } from './routes/_authenticated/recruiter/dashboard'
 import { Route as AuthenticatedCandidateDashboardRouteImport } from './routes/_authenticated/candidate/dashboard'
-import { Route as AuthenticatedCandidateInterviewIdRouteImport } from './routes/_authenticated/candidate/interview.$id'
+import { Route as AuthenticatedCandidateInterviewTakingIdRouteImport } from './routes/_authenticated/candidate/interview-taking.$id'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -60,10 +60,10 @@ const AuthenticatedCandidateDashboardRoute =
     path: '/candidate/dashboard',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedCandidateInterviewIdRoute =
-  AuthenticatedCandidateInterviewIdRouteImport.update({
-    id: '/candidate/interview/$id',
-    path: '/candidate/interview/$id',
+const AuthenticatedCandidateInterviewTakingIdRoute =
+  AuthenticatedCandidateInterviewTakingIdRouteImport.update({
+    id: '/candidate/interview-taking/$id',
+    path: '/candidate/interview-taking/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 
@@ -75,7 +75,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
   '/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
-  '/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
+  '/candidate/interview-taking/$id': typeof AuthenticatedCandidateInterviewTakingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,7 +85,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
   '/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
-  '/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
+  '/candidate/interview-taking/$id': typeof AuthenticatedCandidateInterviewTakingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,7 +97,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/candidate/dashboard': typeof AuthenticatedCandidateDashboardRoute
   '/_authenticated/recruiter/dashboard': typeof AuthenticatedRecruiterDashboardRoute
-  '/_authenticated/candidate/interview/$id': typeof AuthenticatedCandidateInterviewIdRoute
+  '/_authenticated/candidate/interview-taking/$id': typeof AuthenticatedCandidateInterviewTakingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,7 +109,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/candidate/dashboard'
     | '/recruiter/dashboard'
-    | '/candidate/interview/$id'
+    | '/candidate/interview-taking/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -119,7 +119,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/candidate/dashboard'
     | '/recruiter/dashboard'
-    | '/candidate/interview/$id'
+    | '/candidate/interview-taking/$id'
   id:
     | '__root__'
     | '/'
@@ -130,7 +130,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/candidate/dashboard'
     | '/_authenticated/recruiter/dashboard'
-    | '/_authenticated/candidate/interview/$id'
+    | '/_authenticated/candidate/interview-taking/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -199,11 +199,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCandidateDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/candidate/interview/$id': {
-      id: '/_authenticated/candidate/interview/$id'
-      path: '/candidate/interview/$id'
-      fullPath: '/candidate/interview/$id'
-      preLoaderRoute: typeof AuthenticatedCandidateInterviewIdRouteImport
+    '/_authenticated/candidate/interview-taking/$id': {
+      id: '/_authenticated/candidate/interview-taking/$id'
+      path: '/candidate/interview-taking/$id'
+      fullPath: '/candidate/interview-taking/$id'
+      preLoaderRoute: typeof AuthenticatedCandidateInterviewTakingIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
   }
@@ -213,15 +213,15 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedCandidateDashboardRoute: typeof AuthenticatedCandidateDashboardRoute
   AuthenticatedRecruiterDashboardRoute: typeof AuthenticatedRecruiterDashboardRoute
-  AuthenticatedCandidateInterviewIdRoute: typeof AuthenticatedCandidateInterviewIdRoute
+  AuthenticatedCandidateInterviewTakingIdRoute: typeof AuthenticatedCandidateInterviewTakingIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedCandidateDashboardRoute: AuthenticatedCandidateDashboardRoute,
   AuthenticatedRecruiterDashboardRoute: AuthenticatedRecruiterDashboardRoute,
-  AuthenticatedCandidateInterviewIdRoute:
-    AuthenticatedCandidateInterviewIdRoute,
+  AuthenticatedCandidateInterviewTakingIdRoute:
+    AuthenticatedCandidateInterviewTakingIdRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -1,0 +1,262 @@
+import { memo, useCallback, useRef, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, Upload, AlertCircle } from 'lucide-react';
+import { useInterviewStore } from '@/stores/interview-store';
+import { candidateMutations } from '@/lib/candidate-queries';
+import { ResumeUploadFlow } from './ResumeUploadFlow';
+import { useQueryClient } from '@tanstack/react-query';
+
+interface Resume {
+  id: string;
+  fileName: string;
+  fileType: "pdf" | "docx";
+  extractedName: string;
+  extractedEmail: string;
+  extractedPhone: string;
+  uploadedAt: string | null;
+  verifiedAt: string | null;
+  verificationMethod: "ai_only" | "ai_plus_manual" | "manual_only";
+  missingFields?: string[] | null;
+}
+
+type ResumeData =
+  | {
+      message: string;
+      sessionStatus: string;
+      sessionId: string;
+      canResume: true;
+    }
+  | {
+      interview: {
+        id: string;
+        title: string;
+      };
+      canStart: boolean;
+      verifiedResumes: Resume[];
+      incompleteResumes: Resume[];
+      requiresUpload: boolean;
+    };
+
+interface SimpleResumeSelectorProps {
+  data: ResumeData;
+  interviewId: string;
+}
+
+export const SimpleResumeSelector = memo(function SimpleResumeSelector({
+  data,
+  interviewId,
+}: SimpleResumeSelectorProps) {
+  const { setCurrentStep } = useInterviewStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const startInterviewMutation = candidateMutations.useStartInterview();
+  const uploadMutation = candidateMutations.useUploadResume();
+  const [verifyingResume, setVerifyingResume] = useState<Resume | null>(null);
+
+  const handleResumeSelect = useCallback((resumeId: string) => {
+    setCurrentStep('ready');
+    // Store the selected resume ID for later use
+    localStorage.setItem('selectedResumeId', resumeId);
+  }, [setCurrentStep]);
+
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await uploadMutation.mutateAsync(file);
+
+      // Invalidate queries to refresh the UI after upload
+      queryClient.invalidateQueries({
+        queryKey: ["candidate", "interview", interviewId, "resume-check"]
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["candidate", "resumes"]
+      });
+
+      if (result.status === 'verified') {
+        handleResumeSelect(result.resume.id);
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+    }
+  }, [uploadMutation, handleResumeSelect, queryClient, interviewId]);
+
+  const handleIncompleteResumeClick = useCallback((resume: Resume) => {
+    setVerifyingResume(resume);
+  }, []);
+
+  const handleVerificationSuccess = useCallback((resume: Resume) => {
+    setVerifyingResume(null);
+
+    // Invalidate queries to refresh the UI
+    queryClient.invalidateQueries({
+      queryKey: ["candidate", "interview", interviewId, "resume-check"]
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["candidate", "resumes"]
+    });
+
+    if (resume.verifiedAt && (!resume.missingFields || resume.missingFields.length === 0)) {
+      handleResumeSelect(resume.id);
+    }
+  }, [handleResumeSelect, queryClient, interviewId]);
+
+  if (verifyingResume) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setVerifyingResume(null)}
+            >
+              ← Back to Resume Selection
+            </Button>
+          </div>
+          <ResumeUploadFlow
+            mode="interview"
+            onSuccess={handleVerificationSuccess}
+            initialResume={verifyingResume}
+            existingResumes={[]}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if ('sessionStatus' in data) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+          <h3 className="text-lg font-medium mb-2">Active Session Found</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {data.message}
+          </p>
+          <Button onClick={() => setCurrentStep('questions')}>
+            Continue Interview
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-6">
+          <div
+            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
+            <h4 className="font-medium mb-2">Upload New Resume</h4>
+            <p className="text-sm text-muted-foreground mb-4">
+              PDF or DOCX file (max 5MB)
+            </p>
+            <Button disabled={uploadMutation.isPending}>
+              {uploadMutation.isPending ? 'Uploading...' : 'Choose File'}
+            </Button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </CardContent>
+      </Card>
+
+      {data.incompleteResumes.length > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h4 className="font-medium mb-4 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              Incomplete Resumes - Need Verification
+            </h4>
+            <div className="space-y-2">
+              {data.incompleteResumes.map((resume) => (
+                <div
+                  key={resume.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer border-yellow-200"
+                  onClick={() => handleIncompleteResumeClick(resume)}
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{resume.fileName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Missing: {resume.missingFields?.join(', ') || 'Needs verification'}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs border-yellow-400">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Incomplete
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleIncompleteResumeClick(resume);
+                      }}
+                    >
+                      Complete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {data.verifiedResumes.length > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h4 className="font-medium mb-4 flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              Verified Resumes - Ready to Use
+            </h4>
+            <div className="space-y-2">
+              {data.verifiedResumes.map((resume) => (
+                <div
+                  key={resume.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer border-green-200"
+                  onClick={() => handleResumeSelect(resume.id)}
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{resume.fileName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {resume.extractedName} • {resume.extractedEmail}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                    <Button
+                      size="sm"
+                      disabled={startInterviewMutation.isPending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleResumeSelect(resume.id);
+                      }}
+                    >
+                      {startInterviewMutation.isPending ? 'Starting...' : 'Select'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+});

@@ -1,32 +1,37 @@
 import { Hono } from "hono";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import { eq, and, or, sql } from "drizzle-orm";
 import { requireCandidate } from "../middleware/candidate-auth";
 import { db } from "../db/db";
 import { interviews, interviewSessions, resumes, answers } from "../db/schema";
 import { uploadFile, generateResumeKey, isValidResumeType } from "../utils/r2";
-import { extractResumeData, processChatbotMessage } from "../utils/ai-integration";
+import {
+  extractResumeData,
+  processChatbotMessage,
+} from "../utils/ai-integration";
 import { evaluationQueue } from "../utils/evaluation-queue";
 
 const candidateRoute = new Hono()
   .use("*", requireCandidate)
   .get("/test", (c) => {
-    const user = c.get('user');
+    const user = c.get("user");
     return c.json({
       message: "Candidate auth working",
       userId: user.userId,
-      role: user.role
+      role: user.role,
     });
   })
   .get("/dashboard", async (c) => {
-    const user = c.get('user');
+    const user = c.get("user");
 
     const availableInterviews = await db.query.interviews.findMany({
       where: and(
-        eq(interviews.status, 'published'),
+        eq(interviews.status, "published"),
         or(
           eq(interviews.isPublic, true),
-          sql`${interviews.assignedEmails} @> ${JSON.stringify([user.email])}`
-        )
+          sql`${interviews.assignedEmails} @> ${JSON.stringify([user.email])}`,
+        ),
       ),
       columns: {
         id: true,
@@ -35,8 +40,8 @@ const candidateRoute = new Hono()
         jobRole: true,
         deadline: true,
         isPublic: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
 
     const mySessions = await db.query.interviewSessions.findMany({
@@ -46,19 +51,19 @@ const candidateRoute = new Hono()
           columns: {
             id: true,
             title: true,
-            jobRole: true
-          }
-        }
-      }
+            jobRole: true,
+          },
+        },
+      },
     });
 
     return c.json({
       availableInterviews,
-      mySessions
+      mySessions,
     });
   })
   .get("/resumes", async (c) => {
-    const user = c.get('user');
+    const user = c.get("user");
 
     const userResumes = await db.query.resumes.findMany({
       where: eq(resumes.userId, user.userId),
@@ -70,15 +75,17 @@ const candidateRoute = new Hono()
         extractedEmail: true,
         extractedPhone: true,
         uploadedAt: true,
-        verifiedAt: true
+        verifiedAt: true,
+        verificationMethod: true,
+        missingFields: true,
       },
-      orderBy: (resumes, { desc }) => [desc(resumes.uploadedAt)]
+      orderBy: (resumes, { desc }) => [desc(resumes.uploadedAt)],
     });
 
     return c.json({ resumes: userResumes });
   })
   .post("/resumes/upload", async (c) => {
-    const user = c.get('user');
+    const user = c.get("user");
     const body = await c.req.parseBody();
     const file = body.file as File;
 
@@ -87,15 +94,21 @@ const candidateRoute = new Hono()
     }
 
     if (!isValidResumeType(file.type)) {
-      return c.json({
-        error: "Invalid file type. Only PDF and DOCX files are allowed"
-      }, 400);
+      return c.json(
+        {
+          error: "Invalid file type. Only PDF and DOCX files are allowed",
+        },
+        400,
+      );
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      return c.json({
-        error: "File too large. Maximum size is 5MB"
-      }, 400);
+      return c.json(
+        {
+          error: "File too large. Maximum size is 5MB",
+        },
+        400,
+      );
     }
 
     try {
@@ -104,131 +117,143 @@ const candidateRoute = new Hono()
 
       await uploadFile(bucketKey, arrayBuffer, file.type);
 
-      const fileType = file.type === 'application/pdf' ? 'pdf' : 'docx';
+      const fileType = file.type === "application/pdf" ? "pdf" : "docx";
 
       const extractedData = await extractResumeData(arrayBuffer, file.type);
 
-      const hasAllFields = extractedData.missing_fields.length === 0 &&
-                          extractedData.confidence.name > 0.8 &&
-                          extractedData.confidence.email > 0.8 &&
-                          extractedData.confidence.phone > 0.8;
+      const hasAllFields =
+        extractedData.missing_fields.length === 0 &&
+        extractedData.confidence.name > 0.8 &&
+        extractedData.confidence.email > 0.8 &&
+        extractedData.confidence.phone > 0.8;
 
-      const verificationMethod = hasAllFields ? 'ai_only' : 'ai_plus_manual';
+      const verificationMethod = hasAllFields ? "ai_only" : "ai_plus_manual";
       const missingFields = extractedData.missing_fields;
 
-      const newResume = await db.insert(resumes).values({
-        userId: user.userId,
-        bucketKey,
-        fileName: file.name,
-        fileType,
-        fileSize: file.size,
-        extractedName: extractedData.name || "Not found",
-        extractedEmail: extractedData.email || "Not found",
-        extractedPhone: extractedData.phone || "Not found",
-        verificationMethod,
-        missingFields
-      }).returning();
+      const newResume = await db
+        .insert(resumes)
+        .values({
+          userId: user.userId,
+          bucketKey,
+          fileName: file.name,
+          fileType,
+          fileSize: file.size,
+          extractedName: extractedData.name || "Not found",
+          extractedEmail: extractedData.email || "Not found",
+          extractedPhone: extractedData.phone || "Not found",
+          verificationMethod,
+          missingFields,
+          verifiedAt: hasAllFields ? new Date() : null,
+        })
+        .returning();
 
       if (hasAllFields) {
         return c.json({
           resume: newResume[0],
-          status: 'verified',
-          message: 'Resume uploaded and verified successfully!'
+          status: "verified",
+          message: "Resume uploaded and verified successfully!",
         });
       } else {
         return c.json({
           resume: newResume[0],
-          status: 'needs_completion',
-          message: 'Resume uploaded. Some information needs verification.',
+          status: "needs_completion",
+          message: "Resume uploaded. Some information needs verification.",
           missingFields,
-          extractedData
+          extractedData,
         });
       }
-
     } catch (error) {
-      console.error('Resume upload error:', error);
+      console.error("Resume upload error:", error);
       return c.json({ error: "Failed to upload resume" }, 500);
     }
   })
-  .post("/resumes/:id/chat", async (c) => {
-    const user = c.get('user');
-    const resumeId = c.req.param('id');
-    const body = await c.req.json();
+  .post(
+    "/resumes/:id/chat",
+    zValidator(
+      "json",
+      z.object({
+        messages: z.array(z.object({ role: z.string(), content: z.string() })),
+      }),
+    ),
+    async (c) => {
+      const user = c.get("user");
+      const resumeId = c.req.param("id");
+      const { messages } = c.req.valid("json");
 
-    const { messages } = body;
+      if (!messages || !Array.isArray(messages)) {
+        return c.json({ error: "Messages array is required" }, 400);
+      }
 
-    if (!messages || !Array.isArray(messages)) {
-      return c.json({ error: "Messages array is required" }, 400);
-    }
-
-    const resume = await db.query.resumes.findFirst({
-      where: and(
-        eq(resumes.id, resumeId),
-        eq(resumes.userId, user.userId)
-      )
-    });
-
-    if (!resume) {
-      return c.json({ error: "Resume not found" }, 404);
-    }
-
-    if (!resume.missingFields || resume.missingFields.length === 0) {
-      return c.json({
-        message: "Resume is already complete!",
-        is_complete: true
+      const resume = await db.query.resumes.findFirst({
+        where: and(eq(resumes.id, resumeId), eq(resumes.userId, user.userId)),
       });
-    }
 
-    try {
-      const currentData = {
-        name: resume.extractedName,
-        email: resume.extractedEmail === "Not found" ? "" : resume.extractedEmail,
-        phone: resume.extractedPhone === "Not found" ? "" : resume.extractedPhone
-      };
+      if (!resume) {
+        return c.json({ error: "Resume not found" }, 404);
+      }
 
-      const response = await processChatbotMessage(
-        messages,
-        resume.missingFields,
-        currentData
-      );
-
-      if (response.is_complete) {
-        const updatedEmail = response.extracted_data.email || currentData.email;
-        const updatedPhone = response.extracted_data.phone || currentData.phone;
-
-        await db.update(resumes)
-          .set({
-            extractedEmail: updatedEmail,
-            extractedPhone: updatedPhone,
-            missingFields: [],
-            verificationMethod: 'ai_plus_manual',
-            verifiedAt: new Date()
-          })
-          .where(eq(resumes.id, resumeId));
-
+      if (!resume.missingFields || resume.missingFields.length === 0) {
         return c.json({
-          message: response.message,
+          message: "Resume is already complete!",
           is_complete: true,
-          resume_updated: true
         });
       }
 
-      return c.json({
-        message: response.message,
-        is_complete: false,
-        next_field_needed: response.next_field_needed,
-        extracted_data: response.extracted_data,
-        validation: response.validation
-      });
+      try {
+        const currentData = {
+          name: resume.extractedName,
+          email:
+            resume.extractedEmail === "Not found" ? "" : resume.extractedEmail,
+          phone:
+            resume.extractedPhone === "Not found" ? "" : resume.extractedPhone,
+        };
 
-    } catch (error) {
-      console.error('Chatbot error:', error);
-      return c.json({ error: "Failed to process message" }, 500);
-    }
-  })
+        const response = await processChatbotMessage(
+          messages,
+          resume.missingFields,
+          currentData,
+        );
+
+        if (response.is_complete) {
+          const updatedEmail =
+            response.extracted_data.email || currentData.email;
+          const updatedPhone =
+            response.extracted_data.phone || currentData.phone;
+
+          await db
+            .update(resumes)
+            .set({
+              extractedEmail: updatedEmail,
+              extractedPhone: updatedPhone,
+              missingFields: [],
+              verificationMethod: "ai_plus_manual",
+              verifiedAt: new Date(),
+            })
+            .where(eq(resumes.id, resumeId));
+
+          return c.json({
+            message: response.message,
+            is_complete: true,
+            resume_updated: true,
+          });
+        }
+
+        return c.json({
+          message: response.message,
+          is_complete: false,
+          next_field_needed: response.next_field_needed,
+          extracted_data: response.extracted_data,
+          validation: response.validation,
+        });
+      } catch (error) {
+        console.error("Chatbot error:", error);
+        return c.json({ error: "Failed to process message" }, 500);
+      }
+    },
+  )
   .get("/interviews/:id/details", async (c) => {
-    const user = c.get('user');
-    const interviewId = c.req.param('id');
+    const user = c.get("user");
+    const interviewId = c.req.param("id");
 
     const interview = await db.query.interviews.findFirst({
       where: eq(interviews.id, interviewId),
@@ -241,12 +266,14 @@ const candidateRoute = new Hono()
                 type: true,
                 difficulty: true,
                 timeLimit: true,
-                points: true
-              }
-            }
+                points: true,
+              },
+            },
           },
-          orderBy: (interviewQuestions, { asc }) => [asc(interviewQuestions.orderIndex)]
-        }
+          orderBy: (interviewQuestions, { asc }) => [
+            asc(interviewQuestions.orderIndex),
+          ],
+        },
       },
       columns: {
         id: true,
@@ -257,32 +284,35 @@ const candidateRoute = new Hono()
         isPublic: true,
         status: true,
         assignedEmails: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
 
     if (!interview) {
       return c.json({ error: "Interview not found" }, 404);
     }
 
-    if (interview.status !== 'published') {
+    if (interview.status !== "published") {
       return c.json({ error: "Interview is not published" }, 403);
     }
 
-    const canAccess = interview.isPublic ||
-      (interview.assignedEmails && interview.assignedEmails.includes(user.email));
+    const canAccess =
+      interview.isPublic ||
+      (interview.assignedEmails &&
+        interview.assignedEmails.includes(user.email));
 
     if (!canAccess) {
       return c.json({ error: "You don't have access to this interview" }, 403);
     }
 
-    const deadlinePassed = interview.deadline && new Date() > new Date(interview.deadline);
+    const deadlinePassed =
+      interview.deadline && new Date() > new Date(interview.deadline);
 
-    const questionsSummary = interview.questions.map(iq => ({
+    const questionsSummary = interview.questions.map((iq) => ({
       type: iq.question.type,
       difficulty: iq.question.difficulty,
       timeLimit: iq.question.timeLimit,
-      points: iq.points
+      points: iq.points,
     }));
 
     const totalTime = questionsSummary.reduce((sum, q) => sum + q.timeLimit, 0);
@@ -298,16 +328,16 @@ const candidateRoute = new Hono()
         totalQuestions: interview.questions.length,
         totalTime,
         totalPoints,
-        questionsSummary
+        questionsSummary,
       },
       canAccess: true,
       deadlinePassed,
-      accessType: interview.isPublic ? 'public' : 'assigned'
+      accessType: interview.isPublic ? "public" : "assigned",
     });
   })
   .get("/interviews/:id/resume-check", async (c) => {
-    const user = c.get('user');
-    const interviewId = c.req.param('id');
+    const user = c.get("user");
+    const interviewId = c.req.param("id");
 
     const interview = await db.query.interviews.findFirst({
       where: eq(interviews.id, interviewId),
@@ -317,26 +347,29 @@ const candidateRoute = new Hono()
         status: true,
         isPublic: true,
         assignedEmails: true,
-        deadline: true
-      }
+        deadline: true,
+      },
     });
 
     if (!interview) {
       return c.json({ error: "Interview not found" }, 404);
     }
 
-    if (interview.status !== 'published') {
+    if (interview.status !== "published") {
       return c.json({ error: "Interview is not published" }, 403);
     }
 
-    const canAccess = interview.isPublic ||
-      (interview.assignedEmails && interview.assignedEmails.includes(user.email));
+    const canAccess =
+      interview.isPublic ||
+      (interview.assignedEmails &&
+        interview.assignedEmails.includes(user.email));
 
     if (!canAccess) {
       return c.json({ error: "You don't have access to this interview" }, 403);
     }
 
-    const deadlinePassed = interview.deadline && new Date() > new Date(interview.deadline);
+    const deadlinePassed =
+      interview.deadline && new Date() > new Date(interview.deadline);
 
     if (deadlinePassed) {
       return c.json({ error: "Interview deadline has passed" }, 403);
@@ -345,30 +378,34 @@ const candidateRoute = new Hono()
     const existingSession = await db.query.interviewSessions.findFirst({
       where: and(
         eq(interviewSessions.userId, user.userId),
-        eq(interviewSessions.interviewId, interviewId)
-      )
+        eq(interviewSessions.interviewId, interviewId),
+      ),
     });
 
-    if (existingSession && existingSession.status === 'completed') {
-      return c.json({
-        error: "You have already completed this interview",
-        sessionStatus: 'completed'
-      }, 403);
+    if (existingSession && existingSession.status === "completed") {
+      return c.json(
+        {
+          error: "You have already completed this interview",
+          sessionStatus: "completed",
+        },
+        403,
+      );
     }
 
-    if (existingSession && existingSession.status === 'in_progress') {
+    if (existingSession && existingSession.status === "in_progress") {
       return c.json({
         message: "You have an active session for this interview",
-        sessionStatus: 'in_progress',
+        sessionStatus: "in_progress",
         sessionId: existingSession.id,
-        canResume: true
+        canResume: true,
       });
     }
 
     const userResumes = await db.query.resumes.findMany({
       where: and(
         eq(resumes.userId, user.userId),
-        eq(resumes.verificationMethod, 'ai_only')
+        sql`${resumes.verifiedAt} IS NOT NULL`,
+        sql`(${resumes.missingFields} IS NULL OR jsonb_array_length(${resumes.missingFields}) = 0)`,
       ),
       columns: {
         id: true,
@@ -377,240 +414,344 @@ const candidateRoute = new Hono()
         extractedEmail: true,
         extractedPhone: true,
         uploadedAt: true,
-        verifiedAt: true
+        verifiedAt: true,
       },
-      orderBy: (resumes, { desc }) => [desc(resumes.verifiedAt)]
+      orderBy: (resumes, { desc }) => [desc(resumes.verifiedAt)],
     });
 
     const incompletResumes = await db.query.resumes.findMany({
       where: and(
         eq(resumes.userId, user.userId),
-        eq(resumes.verificationMethod, 'ai_plus_manual')
+        or(
+          sql`${resumes.verifiedAt} IS NULL`,
+          sql`(${resumes.missingFields} IS NOT NULL AND jsonb_array_length(${resumes.missingFields}) > 0)`,
+        ),
       ),
       columns: {
         id: true,
         fileName: true,
-        missingFields: true
-      }
+        missingFields: true,
+      },
     });
 
     return c.json({
       interview: {
         id: interview.id,
-        title: interview.title
+        title: interview.title,
       },
       canStart: true,
       verifiedResumes: userResumes,
       incompleteResumes: incompletResumes,
-      requiresUpload: userResumes.length === 0 && incompletResumes.length === 0
+      requiresUpload: userResumes.length === 0 && incompletResumes.length === 0,
     });
   })
-  .post("/interviews/:id/start", async (c) => {
-    const user = c.get('user');
-    const interviewId = c.req.param('id');
+  .post(
+    "/interviews/:id/start",
+    zValidator("json", z.object({ resumeId: z.string() })),
+    async (c) => {
+      const user = c.get("user");
+      const interviewId = c.req.param("id");
 
-    let body;
-    try {
-      body = await c.req.json();
-    } catch (error) {
-      return c.json({ error: "Invalid JSON in request body" }, 400);
-    }
+      const { resumeId } = c.req.valid("json");
 
-    const { resumeId } = body;
-
-    if (!resumeId) {
-      return c.json({ error: "Resume ID is required" }, 400);
-    }
-
-    const interview = await db.query.interviews.findFirst({
-      where: eq(interviews.id, interviewId),
-      with: {
-        questions: {
-          with: {
-            question: true
+      const interview = await db.query.interviews.findFirst({
+        where: eq(interviews.id, interviewId),
+        with: {
+          questions: {
+            with: {
+              question: true,
+            },
+            orderBy: (interviewQuestions, { asc }) => [
+              asc(interviewQuestions.orderIndex),
+            ],
           },
-          orderBy: (interviewQuestions, { asc }) => [asc(interviewQuestions.orderIndex)]
+        },
+      });
+
+      if (!interview) {
+        return c.json({ error: "Interview not found" }, 404);
+      }
+
+      if (interview.status !== "published") {
+        return c.json({ error: "Interview is not published" }, 403);
+      }
+
+      const canAccess =
+        interview.isPublic ||
+        (interview.assignedEmails &&
+          interview.assignedEmails.includes(user.email));
+
+      if (!canAccess) {
+        return c.json(
+          { error: "You don't have access to this interview" },
+          403,
+        );
+      }
+
+      const deadlinePassed =
+        interview.deadline && new Date() > new Date(interview.deadline);
+      if (deadlinePassed) {
+        return c.json({ error: "Interview deadline has passed" }, 403);
+      }
+
+      const resume = await db.query.resumes.findFirst({
+        where: and(eq(resumes.id, resumeId), eq(resumes.userId, user.userId)),
+      });
+
+      if (!resume) {
+        return c.json({ error: "Resume not found or not owned by user" }, 404);
+      }
+
+      if (resume.missingFields && resume.missingFields.length > 0) {
+        return c.json(
+          {
+            error: "Resume verification is incomplete",
+            missingFields: resume.missingFields,
+          },
+          400,
+        );
+      }
+
+      const existingSession = await db.query.interviewSessions.findFirst({
+        where: and(
+          eq(interviewSessions.userId, user.userId),
+          eq(interviewSessions.interviewId, interviewId),
+        ),
+      });
+
+      if (existingSession && existingSession.status === "completed") {
+        return c.json(
+          {
+            error: "You have already completed this interview",
+          },
+          403,
+        );
+      }
+
+      if (existingSession && existingSession.status === "in_progress") {
+        if (
+          existingSession.lockedUntil &&
+          existingSession.lockedUntil > new Date()
+        ) {
+          return c.json(
+            {
+              error: "Interview is already in progress elsewhere",
+              sessionId: existingSession.id,
+            },
+            409,
+          );
         }
       }
-    });
 
-    if (!interview) {
-      return c.json({ error: "Interview not found" }, 404);
-    }
+      const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      const lockedUntil = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
+      const startedAt = new Date();
 
-    if (interview.status !== 'published') {
-      return c.json({ error: "Interview is not published" }, 403);
-    }
+      const questionsData = interview.questions.map((iq, index) => ({
+        questionIndex: index,
+        question: {
+          id: iq.question.id,
+          type: iq.question.type,
+          difficulty: iq.question.difficulty,
+          questionText: iq.question.questionText,
+          options: iq.question.options,
+          starterCode: iq.question.starterCode,
+          timeLimit: iq.question.timeLimit,
+        },
+        points: iq.points,
+      }));
 
-    const canAccess = interview.isPublic ||
-      (interview.assignedEmails && interview.assignedEmails.includes(user.email));
+      if (existingSession && existingSession.status === "in_progress") {
+        await db
+          .update(interviewSessions)
+          .set({
+            sessionToken,
+            lockedUntil,
+            startedAt: startedAt,
+          })
+          .where(eq(interviewSessions.id, existingSession.id));
 
-    if (!canAccess) {
-      return c.json({ error: "You don't have access to this interview" }, 403);
-    }
-
-    const deadlinePassed = interview.deadline && new Date() > new Date(interview.deadline);
-    if (deadlinePassed) {
-      return c.json({ error: "Interview deadline has passed" }, 403);
-    }
-
-    const resume = await db.query.resumes.findFirst({
-      where: and(
-        eq(resumes.id, resumeId),
-        eq(resumes.userId, user.userId)
-      )
-    });
-
-    if (!resume) {
-      return c.json({ error: "Resume not found or not owned by user" }, 404);
-    }
-
-    if (resume.missingFields && resume.missingFields.length > 0) {
-      return c.json({
-        error: "Resume verification is incomplete",
-        missingFields: resume.missingFields
-      }, 400);
-    }
-
-    const existingSession = await db.query.interviewSessions.findFirst({
-      where: and(
-        eq(interviewSessions.userId, user.userId),
-        eq(interviewSessions.interviewId, interviewId)
-      )
-    });
-
-    if (existingSession && existingSession.status === 'completed') {
-      return c.json({
-        error: "You have already completed this interview"
-      }, 403);
-    }
-
-    if (existingSession && existingSession.status === 'in_progress') {
-      if (existingSession.lockedUntil && existingSession.lockedUntil > new Date()) {
         return c.json({
-          error: "Interview is already in progress elsewhere",
-          sessionId: existingSession.id
-        }, 409);
+          sessionId: existingSession.id,
+          sessionToken,
+          startedAt: startedAt.toISOString(),
+          currentQuestionIndex: existingSession.currentQuestionIndex || 0,
+          questions: questionsData,
+          serverTime: new Date().toISOString(),
+          resumedSession: true,
+        });
       }
-    }
 
-    const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    const lockedUntil = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
-    const startedAt = new Date();
-
-    const questionsData = interview.questions.map((iq, index) => ({
-      questionIndex: index,
-      question: {
-        id: iq.question.id,
-        type: iq.question.type,
-        difficulty: iq.question.difficulty,
-        questionText: iq.question.questionText,
-        options: iq.question.options,
-        starterCode: iq.question.starterCode,
-        timeLimit: iq.question.timeLimit
-      },
-      points: iq.points
-    }));
-
-    if (existingSession && existingSession.status === 'in_progress') {
-      await db.update(interviewSessions)
-        .set({
+      const newSessions = await db
+        .insert(interviewSessions)
+        .values({
+          interviewId,
+          userId: user.userId,
+          resumeId,
           sessionToken,
           lockedUntil,
-          startedAt: startedAt
+          startedAt,
+          currentQuestionIndex: 0,
+          status: "in_progress",
         })
-        .where(eq(interviewSessions.id, existingSession.id));
+        .returning();
+
+      const newSession = newSessions[0];
+
+      if (!newSession) {
+        return c.json({ error: "Failed to create interview session" }, 500);
+      }
 
       return c.json({
-        sessionId: existingSession.id,
+        sessionId: newSession.id,
         sessionToken,
         startedAt: startedAt.toISOString(),
-        currentQuestionIndex: existingSession.currentQuestionIndex || 0,
+        currentQuestionIndex: 0,
         questions: questionsData,
         serverTime: new Date().toISOString(),
-        resumedSession: true
+        resumedSession: false,
       });
-    }
-
-    const newSessions = await db.insert(interviewSessions).values({
-      interviewId,
-      userId: user.userId,
-      resumeId,
-      sessionToken,
-      lockedUntil,
-      startedAt,
-      currentQuestionIndex: 0,
-      status: 'in_progress'
-    }).returning();
-
-    const newSession = newSessions[0];
-
-    if (!newSession) {
-      return c.json({ error: "Failed to create interview session" }, 500);
-    }
-
-    return c.json({
-      sessionId: newSession.id,
-      sessionToken,
-      startedAt: startedAt.toISOString(),
-      currentQuestionIndex: 0,
-      questions: questionsData,
-      serverTime: new Date().toISOString(),
-      resumedSession: false
-    });
-  })
+    },
+  )
   .get("/interviews/active", async (c) => {
-    const user = c.get('user');
+    const user = c.get("user");
+    const serverNow = new Date();
 
     const activeSession = await db.query.interviewSessions.findFirst({
       where: and(
         eq(interviewSessions.userId, user.userId),
-        eq(interviewSessions.status, 'in_progress')
+        eq(interviewSessions.status, "in_progress"),
       ),
       with: {
         interview: {
           columns: {
             id: true,
             title: true,
-            jobRole: true
+            jobRole: true,
           },
           with: {
             questions: {
               with: {
-                question: true
+                question: true,
               },
-              orderBy: (interviewQuestions, { asc }) => [asc(interviewQuestions.orderIndex)]
-            }
-          }
+              orderBy: (interviewQuestions, { asc }) => [
+                asc(interviewQuestions.orderIndex),
+              ],
+            },
+          },
         },
         answers: {
           columns: {
             id: true,
             questionId: true,
             answerText: true,
-            submittedAt: true
+            submittedAt: true,
           },
-          orderBy: (answers, { asc }) => [asc(answers.submittedAt)]
-        }
-      }
+          orderBy: (answers, { asc }) => [asc(answers.submittedAt)],
+        },
+      },
     });
 
     if (!activeSession) {
       return c.json({ activeSession: null });
     }
 
-    if (activeSession.lockedUntil && activeSession.lockedUntil < new Date()) {
+    if (activeSession.lockedUntil && activeSession.lockedUntil < serverNow) {
+      await db
+        .update(interviewSessions)
+        .set({ status: "abandoned" })
+        .where(eq(interviewSessions.id, activeSession.id));
+
       return c.json({
-        activeSession: {
-          id: activeSession.id,
-          interview: activeSession.interview,
-          status: 'expired',
-          message: "Session has expired due to inactivity"
-        }
+        activeSession: null,
+        message: "Session expired due to inactivity",
       });
     }
 
-    const questionsData = activeSession.interview?.questions.map((iq, index) => ({
+    const questions = activeSession.interview?.questions || [];
+    const startedAt = new Date(activeSession.startedAt || serverNow);
+    const totalElapsed = (serverNow.getTime() - startedAt.getTime()) / 1000;
+
+    let currentIndex = activeSession.currentQuestionIndex || 0;
+    let timeAccountedFor = 0;
+
+    for (let i = 0; i < currentIndex; i++) {
+      timeAccountedFor += questions[i]?.question.timeLimit || 0;
+    }
+
+    let wasAutoAdvanced = false;
+
+    while (currentIndex < questions.length) {
+      const currentQ = questions[currentIndex];
+      if (!currentQ) break;
+
+      const timeForCurrentQ = totalElapsed - timeAccountedFor;
+
+      if (timeForCurrentQ > currentQ.question.timeLimit + 5) {
+        const existingAnswer = activeSession.answers.find(
+          (a) => a.questionId === currentQ.question.id,
+        );
+
+        if (!existingAnswer) {
+          await db.insert(answers).values({
+            sessionId: activeSession.id,
+            questionId: currentQ.question.id,
+            answerText: "",
+            timeTaken: Math.floor(timeForCurrentQ),
+            submittedAt: serverNow,
+            evaluated: true,
+            score: 0,
+          });
+        }
+
+        currentIndex++;
+        timeAccountedFor += currentQ.question.timeLimit;
+        wasAutoAdvanced = true;
+      } else {
+        break;
+      }
+    }
+
+    const isCompleted = currentIndex >= questions.length;
+
+    if (isCompleted && activeSession.status === "in_progress") {
+      await db
+        .update(interviewSessions)
+        .set({
+          status: "completed",
+          completedAt: serverNow,
+          currentQuestionIndex: questions.length,
+        })
+        .where(eq(interviewSessions.id, activeSession.id));
+
+      return c.json({
+        activeSession: {
+          id: activeSession.id,
+          status: "completed",
+          message: "Interview completed",
+        },
+      });
+    }
+
+    if (currentIndex !== activeSession.currentQuestionIndex) {
+      await db
+        .update(interviewSessions)
+        .set({ currentQuestionIndex: currentIndex })
+        .where(eq(interviewSessions.id, activeSession.id));
+    }
+
+    const currentQuestion = questions[currentIndex];
+    if (!currentQuestion) {
+      return c.json({ error: "Question not found" }, 500);
+    }
+
+    const timeForCurrentQ = totalElapsed - timeAccountedFor;
+    const timeRemaining = Math.max(
+      0,
+      currentQuestion.question.timeLimit - timeForCurrentQ,
+    );
+
+    const questionsData = questions.map((iq, index) => ({
       questionIndex: index,
       question: {
         id: iq.question.id,
@@ -619,29 +760,10 @@ const candidateRoute = new Hono()
         questionText: iq.question.questionText,
         options: iq.question.options,
         starterCode: iq.question.starterCode,
-        timeLimit: iq.question.timeLimit
+        timeLimit: iq.question.timeLimit,
       },
-      points: iq.points
-    })) || [];
-
-    const currentTime = new Date();
-    const startedAt = new Date(activeSession.startedAt || currentTime);
-    const totalElapsed = Math.floor((currentTime.getTime() - startedAt.getTime()) / 1000);
-
-    let elapsedForCurrentQuestion = totalElapsed;
-    const currentQuestionIndex = activeSession.currentQuestionIndex || 0;
-
-    for (let i = 0; i < currentQuestionIndex && i < questionsData.length; i++) {
-      const questionData = questionsData[i];
-      if (questionData) {
-        elapsedForCurrentQuestion -= questionData.question.timeLimit;
-      }
-    }
-
-    const currentQuestion = questionsData[currentQuestionIndex];
-    const timeRemaining = currentQuestion
-      ? Math.max(0, currentQuestion.question.timeLimit - elapsedForCurrentQuestion)
-      : 0;
+      points: iq.points,
+    }));
 
     return c.json({
       activeSession: {
@@ -649,203 +771,212 @@ const candidateRoute = new Hono()
         interview: activeSession.interview,
         sessionToken: activeSession.sessionToken,
         startedAt: activeSession.startedAt,
-        currentQuestionIndex,
-        totalQuestions: questionsData.length,
+        currentQuestionIndex: currentIndex,
+        totalQuestions: questions.length,
         questions: questionsData,
         answers: activeSession.answers,
         timeRemaining,
-        totalElapsed,
-        serverTime: currentTime.toISOString(),
-        canResume: timeRemaining > 0
-      }
+        totalElapsed: Math.floor(totalElapsed),
+        serverTime: serverNow.toISOString(),
+        canResume: true,
+        wasAutoAdvanced,
+      },
     });
   })
-  .post("/interviews/:sessionId/answers", async (c) => {
-    const user = c.get('user');
-    const sessionId = c.req.param('sessionId');
+  .post(
+    "/interviews/:sessionId/answers",
+    zValidator(
+      "json",
+      z.object({
+        session_token: z.string(),
+        question_index: z.number().int().nonnegative(),
+        answer: z.string().min(1),
+      }),
+    ),
+    async (c) => {
+      const user = c.get("user");
+      const sessionId = c.req.param("sessionId");
 
-    let body;
-    try {
-      body = await c.req.json();
-    } catch (error) {
-      return c.json({ error: "Invalid JSON in request body" }, 400);
-    }
+      const { session_token, question_index, answer } = c.req.valid("json");
 
-    const { session_token, question_index, answer } = body;
-
-    if (!session_token || question_index === undefined || !answer) {
-      return c.json({
-        error: "Missing required fields: session_token, question_index, answer"
-      }, 400);
-    }
-
-    const session = await db.query.interviewSessions.findFirst({
-      where: eq(interviewSessions.id, sessionId),
-      with: {
-        interview: {
-          with: {
-            questions: {
-              with: {
-                question: true
+      const session = await db.query.interviewSessions.findFirst({
+        where: eq(interviewSessions.id, sessionId),
+        with: {
+          interview: {
+            with: {
+              questions: {
+                with: {
+                  question: true,
+                },
+                orderBy: (interviewQuestions, { asc }) => [
+                  asc(interviewQuestions.orderIndex),
+                ],
               },
-              orderBy: (interviewQuestions, { asc }) => [asc(interviewQuestions.orderIndex)]
-            }
-          }
-        }
+            },
+          },
+        },
+      });
+
+      if (!session) {
+        return c.json({ error: "Session not found" }, 404);
       }
-    });
 
-    if (!session) {
-      return c.json({ error: "Session not found" }, 404);
-    }
-
-    if (session.userId !== user.userId) {
-      return c.json({ error: "Session does not belong to user" }, 403);
-    }
-
-    if (session.sessionToken !== session_token) {
-      return c.json({ error: "Invalid session token" }, 401);
-    }
-
-    if (session.status !== 'in_progress') {
-      return c.json({ error: "Session is not in progress" }, 409);
-    }
-
-    if (session.lockedUntil && session.lockedUntil < new Date()) {
-      return c.json({ error: "Session has expired" }, 409);
-    }
-
-    if (question_index !== session.currentQuestionIndex) {
-      return c.json({
-        error: "Invalid question index",
-        expected: session.currentQuestionIndex,
-        received: question_index
-      }, 400);
-    }
-
-    const serverNow = new Date();
-    const startedAt = new Date(session.startedAt || serverNow);
-    const totalElapsed = (serverNow.getTime() - startedAt.getTime()) / 1000;
-
-    const questions = session.interview?.questions || [];
-
-    let expectedMinTime = 0;
-    for (let i = 0; i < question_index; i++) {
-      const questionData = questions[i];
-      if (questionData) {
-        expectedMinTime += questionData.question.timeLimit;
+      if (session.userId !== user.userId) {
+        return c.json({ error: "Session does not belong to user" }, 403);
       }
-    }
 
-    if (totalElapsed < expectedMinTime - 5) {
-      return c.json({
-        error: "Invalid submission time - too fast",
-        details: {
-          totalElapsed: Math.floor(totalElapsed),
-          expectedMinTime,
-          difference: Math.floor(totalElapsed - expectedMinTime)
-        }
-      }, 400);
-    }
+      if (session.sessionToken !== session_token) {
+        return c.json({ error: "Invalid session token" }, 401);
+      }
 
-    const currentQuestion = questions[question_index];
-    if (!currentQuestion) {
-      return c.json({ error: "Question not found" }, 404);
-    }
+      if (session.status !== "in_progress") {
+        return c.json({ error: "Session is not in progress" }, 409);
+      }
 
-    const timeForCurrentQ = totalElapsed - expectedMinTime;
-    const timeLimit = currentQuestion.question.timeLimit;
+      if (session.lockedUntil && session.lockedUntil < new Date()) {
+        return c.json({ error: "Session has expired" }, 409);
+      }
 
-    if (timeForCurrentQ > timeLimit + 2) {
-      return c.json({
-        error: "Time limit exceeded",
-        details: {
-          timeForCurrentQuestion: Math.floor(timeForCurrentQ),
-          timeLimit,
-          exceeded: Math.floor(timeForCurrentQ - timeLimit)
-        }
-      }, 400);
-    }
+      if (question_index !== session.currentQuestionIndex) {
+        return c.json(
+          {
+            error: "Invalid question index",
+            expected: session.currentQuestionIndex,
+            received: question_index,
+          },
+          400,
+        );
+      }
 
-    await db.insert(answers).values({
-      sessionId: session.id,
-      questionId: currentQuestion.question.id,
-      answerText: answer,
-      timeTaken: Math.floor(timeForCurrentQ),
-      submittedAt: serverNow,
-      evaluated: false
-    });
+      const serverNow = new Date();
+      const startedAt = new Date(session.startedAt || serverNow);
+      const totalElapsed = (serverNow.getTime() - startedAt.getTime()) / 1000;
 
-    await evaluationQueue.addJob({
-      sessionId: session.id,
-      questionId: currentQuestion.question.id,
-      answerText: answer,
-      questionType: currentQuestion.question.type,
-      questionData: currentQuestion.question
-    });
+      const questions = session.interview?.questions || [];
+      const currentQuestion = questions[question_index];
 
-    const nextQuestionIndex = question_index + 1;
-    const isComplete = nextQuestionIndex >= questions.length;
+      if (!currentQuestion) {
+        return c.json({ error: "Question not found" }, 404);
+      }
 
-    await db.update(interviewSessions)
-      .set({
-        currentQuestionIndex: nextQuestionIndex,
-        status: isComplete ? 'completed' : 'in_progress',
-        completedAt: isComplete ? serverNow : null
-      })
-      .where(eq(interviewSessions.id, session.id));
+      let timeAccountedFor = 0;
+      for (let i = 0; i < question_index; i++) {
+        timeAccountedFor += questions[i]?.question.timeLimit || 0;
+      }
 
-    if (isComplete) {
+      const timeForCurrentQ = totalElapsed - timeAccountedFor;
+      const timeLimit = currentQuestion.question.timeLimit;
+      const minTime = Math.floor(timeLimit * 0.5);
+
+      if (timeForCurrentQ < minTime - 2) {
+        return c.json(
+          {
+            error: "Please spend more time reviewing this question",
+            details: {
+              timeSpent: Math.floor(timeForCurrentQ),
+              minimumRequired: minTime,
+              secondsRemaining: Math.floor(minTime - timeForCurrentQ),
+            },
+          },
+          400,
+        );
+      }
+
+      if (timeForCurrentQ > timeLimit + 5) {
+        return c.json(
+          {
+            error: "Time limit exceeded",
+            details: {
+              timeSpent: Math.floor(timeForCurrentQ),
+              timeLimit,
+              exceeded: Math.floor(timeForCurrentQ - timeLimit),
+            },
+          },
+          400,
+        );
+      }
+
+      await db.insert(answers).values({
+        sessionId: session.id,
+        questionId: currentQuestion.question.id,
+        answerText: answer,
+        timeTaken: Math.floor(timeForCurrentQ),
+        submittedAt: serverNow,
+        evaluated: false,
+      });
+
+      await evaluationQueue.addJob({
+        sessionId: session.id,
+        questionId: currentQuestion.question.id,
+        answerText: answer,
+        questionType: currentQuestion.question.type,
+        questionData: currentQuestion.question,
+      });
+
+      const nextQuestionIndex = question_index + 1;
+      const isComplete = nextQuestionIndex >= questions.length;
+
+      await db
+        .update(interviewSessions)
+        .set({
+          currentQuestionIndex: nextQuestionIndex,
+          status: isComplete ? "completed" : "in_progress",
+          completedAt: isComplete ? serverNow : null,
+        })
+        .where(eq(interviewSessions.id, session.id));
+
+      if (isComplete) {
+        return c.json({
+          success: true,
+          completed: true,
+          message: "Interview completed! Results will be available soon.",
+          finalStats: {
+            totalQuestions: questions.length,
+            totalTime: Math.floor(totalElapsed),
+            completedAt: serverNow.toISOString(),
+          },
+        });
+      }
+
+      const nextQuestion = questions[nextQuestionIndex];
+      if (!nextQuestion) {
+        return c.json({ error: "Next question not found" }, 500);
+      }
+
       return c.json({
         success: true,
-        completed: true,
-        message: "Interview completed! Results will be available soon.",
-        finalStats: {
-          totalQuestions: questions.length,
-          totalTime: Math.floor(totalElapsed),
-          completedAt: serverNow.toISOString()
-        }
-      });
-    }
-
-    const nextQuestion = questions[nextQuestionIndex];
-    if (!nextQuestion) {
-      return c.json({ error: "Next question not found" }, 500);
-    }
-
-    return c.json({
-      success: true,
-      completed: false,
-      nextQuestionIndex,
-      nextQuestion: {
-        questionIndex: nextQuestionIndex,
-        question: {
-          id: nextQuestion.question.id,
-          type: nextQuestion.question.type,
-          difficulty: nextQuestion.question.difficulty,
-          questionText: nextQuestion.question.questionText,
-          options: nextQuestion.question.options,
-          starterCode: nextQuestion.question.starterCode,
-          timeLimit: nextQuestion.question.timeLimit
+        completed: false,
+        nextQuestionIndex,
+        nextQuestion: {
+          questionIndex: nextQuestionIndex,
+          question: {
+            id: nextQuestion.question.id,
+            type: nextQuestion.question.type,
+            difficulty: nextQuestion.question.difficulty,
+            questionText: nextQuestion.question.questionText,
+            options: nextQuestion.question.options,
+            starterCode: nextQuestion.question.starterCode,
+            timeLimit: nextQuestion.question.timeLimit,
+          },
+          points: nextQuestion.points,
         },
-        points: nextQuestion.points
-      },
-      timeLimit: nextQuestion.question.timeLimit,
-      serverTime: serverNow.toISOString()
-    });
-  })
+        timeLimit: nextQuestion.question.timeLimit,
+        serverTime: serverNow.toISOString(),
+      });
+    },
+  )
   .post("/test-evaluation/:sessionId", async (c) => {
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param("sessionId");
 
     const session = await db.query.interviewSessions.findFirst({
       where: eq(interviewSessions.id, sessionId),
       with: {
         answers: {
           with: {
-            question: true
-          }
-        }
-      }
+            question: true,
+          },
+        },
+      },
     });
 
     if (!session) {
@@ -860,7 +991,7 @@ const candidateRoute = new Hono()
           questionId: answer.questionId,
           answerText: answer.answerText,
           questionType: answer.question.type,
-          questionData: answer.question
+          questionData: answer.question,
         });
         evaluationJobs++;
       }
@@ -868,11 +999,11 @@ const candidateRoute = new Hono()
 
     return c.json({
       message: `Queued ${evaluationJobs} evaluation jobs for session ${sessionId}`,
-      queueStatus: evaluationQueue.getQueueStatus()
+      queueStatus: evaluationQueue.getQueueStatus(),
     });
   })
   .get("/evaluation-status/:sessionId", async (c) => {
-    const sessionId = c.req.param('sessionId');
+    const sessionId = c.req.param("sessionId");
 
     const session = await db.query.interviewSessions.findFirst({
       where: eq(interviewSessions.id, sessionId),
@@ -884,19 +1015,19 @@ const candidateRoute = new Hono()
                 id: true,
                 type: true,
                 questionText: true,
-                points: true
-              }
-            }
-          }
-        }
-      }
+                points: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!session) {
       return c.json({ error: "Session not found" }, 404);
     }
 
-    const evaluationStatus = session.answers.map(answer => ({
+    const evaluationStatus = session.answers.map((answer) => ({
       questionId: answer.questionId,
       questionType: answer.question?.type,
       questionText: answer.question?.questionText?.substring(0, 100) + "...",
@@ -904,10 +1035,10 @@ const candidateRoute = new Hono()
       evaluated: answer.evaluated,
       score: answer.score,
       maxPoints: answer.question?.points,
-      evaluatedAt: answer.evaluatedAt
+      evaluatedAt: answer.evaluatedAt,
     }));
 
-    const totalEvaluated = session.answers.filter(a => a.evaluated).length;
+    const totalEvaluated = session.answers.filter((a) => a.evaluated).length;
     const totalAnswers = session.answers.length;
 
     return c.json({
@@ -920,12 +1051,12 @@ const candidateRoute = new Hono()
       aiSummary: session.aiSummary,
       evaluatedAt: session.evaluatedAt,
       answers: evaluationStatus,
-      queueStatus: evaluationQueue.getQueueStatus()
+      queueStatus: evaluationQueue.getQueueStatus(),
     });
   })
   .get("/results/:sessionId", async (c) => {
-    const user = c.get('user');
-    const sessionId = c.req.param('sessionId');
+    const user = c.get("user");
+    const sessionId = c.req.param("sessionId");
 
     const session = await db.query.interviewSessions.findFirst({
       where: eq(interviewSessions.id, sessionId),
@@ -934,8 +1065,8 @@ const candidateRoute = new Hono()
           columns: {
             id: true,
             title: true,
-            jobRole: true
-          }
+            jobRole: true,
+          },
         },
         answers: {
           with: {
@@ -945,13 +1076,13 @@ const candidateRoute = new Hono()
                 type: true,
                 difficulty: true,
                 questionText: true,
-                points: true
-              }
-            }
+                points: true,
+              },
+            },
           },
-          orderBy: (answers, { asc }) => [asc(answers.submittedAt)]
-        }
-      }
+          orderBy: (answers, { asc }) => [asc(answers.submittedAt)],
+        },
+      },
     });
 
     if (!session) {
@@ -962,20 +1093,20 @@ const candidateRoute = new Hono()
       return c.json({ error: "Access denied" }, 403);
     }
 
-    if (session.status !== 'completed') {
+    if (session.status !== "completed") {
       return c.json({ error: "Interview not completed yet" }, 400);
     }
 
-    const unevaluatedCount = session.answers.filter(a => !a.evaluated).length;
+    const unevaluatedCount = session.answers.filter((a) => !a.evaluated).length;
     if (unevaluatedCount > 0) {
       return c.json({
         message: "Results are being processed",
         evaluationProgress: `${session.answers.length - unevaluatedCount}/${session.answers.length}`,
-        estimatedTime: `${unevaluatedCount * 30} seconds`
+        estimatedTime: `${unevaluatedCount * 30} seconds`,
       });
     }
 
-    const results = session.answers.map(answer => ({
+    const results = session.answers.map((answer) => ({
       questionNumber: session.answers.indexOf(answer) + 1,
       questionType: answer.question?.type,
       difficulty: answer.question?.difficulty,
@@ -984,23 +1115,23 @@ const candidateRoute = new Hono()
       score: answer.score,
       maxPoints: answer.question?.points,
       feedback: answer.feedback,
-      timeTaken: answer.timeTaken
+      timeTaken: answer.timeTaken,
     }));
 
     return c.json({
       interview: {
         title: session.interview?.title,
-        jobRole: session.interview?.jobRole
+        jobRole: session.interview?.jobRole,
       },
       summary: {
         totalScore: session.finalScore,
         maxScore: session.maxScore,
         percentage: session.percentage,
         completedAt: session.completedAt,
-        aiSummary: session.aiSummary
+        aiSummary: session.aiSummary,
       },
       results,
-      totalQuestions: session.answers.length
+      totalQuestions: session.answers.length,
     });
   });
 

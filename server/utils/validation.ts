@@ -29,7 +29,7 @@ export const createQuestionSchema = z.object({
   sampleSolution: z.string().optional().describe("For code only: Complete working solution that demonstrates the expected approach"),
   evaluationCriteria: z.array(z.string()).optional().describe("For code only: 4 specific criteria for evaluation (e.g., 'Correct algorithm implementation', 'Handles edge cases')"),
 
-  timeLimit: z.number().min(1).describe("Time limit in seconds: 20 for easy MCQ, 60 for medium short_answer, 120 for hard code"),
+  timeLimit: z.number().min(1).describe("Time limit in seconds: 60 for easy MCQ, 120 for medium short_answer, 180 for hard code"),
   points: z.number().min(1).describe("Points awarded: 10 for easy questions, 20 for medium, 30 for hard")
 });
 
