@@ -333,37 +333,26 @@ export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
     }, [formData.selectedQuestions, onUpdate, regenerateModal.index]);
 
     const handleRemoveQuestion = useCallback((globalIndex: number) => {
-      console.log('🗑️ handleRemoveQuestion called for slot:', globalIndex);
-      
       const updatedQuestions = [...formData.selectedQuestions];
-      updatedQuestions[globalIndex] = null;  // Set to null, don't remove from array
-      
-      console.log('🎯 Fixed slot array after removal:', updatedQuestions.map((q, i) => ({
-        slot: i,
-        question: q ? { id: q.id, difficulty: q.difficulty } : null
-      })));
-      
+      updatedQuestions[globalIndex] = null;
+
       onUpdate({ selectedQuestions: updatedQuestions });
       toast.success("Question removed");
     }, [formData.selectedQuestions, onUpdate]);
 
     const handleSelectFromBank = useCallback((difficulty: 'easy' | 'medium' | 'hard', slotIndex: number) => {
-      console.log('🎯 handleSelectFromBank called', { difficulty, slotIndex });
-      
-      const expectedType = difficulty === 'easy' ? 'mcq' : 
+      const expectedType = difficulty === 'easy' ? 'mcq' :
                           difficulty === 'medium' ? 'short_answer' : 'code';
-      
+
       let targetGlobalIndex = 0;
       if (difficulty === 'easy') {
-        targetGlobalIndex = slotIndex; 
+        targetGlobalIndex = slotIndex;
       } else if (difficulty === 'medium') {
-        targetGlobalIndex = 2 + slotIndex; 
+        targetGlobalIndex = 2 + slotIndex;
       } else if (difficulty === 'hard') {
-        targetGlobalIndex = 4 + slotIndex; 
+        targetGlobalIndex = 4 + slotIndex;
       }
-      
-      console.log('🎯 Target global index calculated:', targetGlobalIndex);
-      
+
       setQuestionBankModal({
         open: true,
         difficulty,
@@ -375,35 +364,23 @@ export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
     const handleQuestionSelectedFromBank = useCallback((selectedQuestion: Question) => {
       if (questionBankModal.globalIndex === null) return;
 
-      console.log('🎯 handleQuestionSelectedFromBank called', { 
-        targetIndex: questionBankModal.globalIndex,
-        questionId: selectedQuestion.id,
-        questionDifficulty: selectedQuestion.difficulty 
-      });
-
       const updatedQuestions = [...formData.selectedQuestions];
-      
+
       while (updatedQuestions.length < 6) {
         updatedQuestions.push(null);
       }
-      
-      const duplicateSlotIndex = updatedQuestions.findIndex((q, index) => 
+
+      const duplicateSlotIndex = updatedQuestions.findIndex((q, index) =>
         q !== null && q.id === selectedQuestion.id && index !== questionBankModal.globalIndex
       );
-      
+
       if (duplicateSlotIndex !== -1) {
-        console.warn('❌ Question already assigned to slot:', duplicateSlotIndex);
         toast.error(`This question is already assigned to slot ${duplicateSlotIndex + 1}. Please choose a different question.`);
         return;
       }
-      
+
       updatedQuestions[questionBankModal.globalIndex] = selectedQuestion;
-      
-      console.log('🎯 Fixed slot array after placement:', updatedQuestions.map((q, i) => ({
-        slot: i,
-        question: q ? { id: q.id, difficulty: q.difficulty } : null
-      })));
-      
+
       onUpdate({ selectedQuestions: updatedQuestions });
       setQuestionBankModal({ open: false, difficulty: 'easy', type: 'mcq', globalIndex: null });
       toast.success(`Question assigned to slot ${questionBankModal.globalIndex + 1}`);

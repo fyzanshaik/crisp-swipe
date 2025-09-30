@@ -2,15 +2,15 @@ import { memo, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
+import {
   Dialog,
   DialogContent,
-  DialogHeader, 
-  DialogTitle, 
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
-  DialogFooter 
+  DialogFooter
 } from "@/components/ui/dialog";
-import { Search, Plus, Clock, Target, Filter } from "lucide-react";
+import { Search, Plus, Clock, Target, Filter, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { recruiterApi } from "@/lib/recruiter-api";
 import type { Question } from "./types";
@@ -114,27 +114,23 @@ export const QuestionBankModal = memo<QuestionBankModalProps>(
       onOpenChange(false);
     }, [onOpenChange]);
 
-    const fetchQuestions = useCallback(async () => {
-      console.log('🏦 fetchQuestions called with filters:', filters);
-      
+    const fetchQuestions = useCallback(async (forceRefresh = false) => {
       const cacheKey = `${filters.difficulty}-${filters.type}-${filters.category || 'all'}`;
       const cachedData = questionBankCache.get(cacheKey);
-      
-      if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
-        console.log('📋 Using cached questions for:', cacheKey);
+
+      if (!forceRefresh && cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
         setQuestions(cachedData.questions);
         return;
       }
-      
+
       setLoading(true);
       try {
-        console.log('🌐 Fetching fresh questions for:', cacheKey);
         const result = await recruiterApi.getQuestions({
           type: filters.type,
           difficulty: filters.difficulty,
           category: filters.category || undefined
         });
-        
+
         const transformedQuestions = result.questions.map(q => ({
           ...q,
           category: q.category || undefined,
@@ -142,13 +138,12 @@ export const QuestionBankModal = memo<QuestionBankModalProps>(
           correctAnswer: q.correctAnswer || undefined,
           expectedKeywords: q.expectedKeywords || undefined
         }));
-        
+
         questionBankCache.set(cacheKey, {
           questions: transformedQuestions,
           timestamp: Date.now()
         });
-        
-        console.log('💾 Cached questions for:', cacheKey, `(${transformedQuestions.length} questions)`);
+
         setQuestions(transformedQuestions);
       } catch (error) {
         console.error("Failed to fetch questions:", error);
@@ -161,6 +156,7 @@ export const QuestionBankModal = memo<QuestionBankModalProps>(
 
     useEffect(() => {
       if (open) {
+        questionBankCache.clear();
         setFilters({
           difficulty: expectedDifficulty,
           type: expectedType,
@@ -174,6 +170,10 @@ export const QuestionBankModal = memo<QuestionBankModalProps>(
         fetchQuestions();
       }
     }, [open, fetchQuestions]);
+
+    const handleRefresh = useCallback(() => {
+      fetchQuestions(true);
+    }, [fetchQuestions]);
 
     const filteredQuestions = questions.filter(q => 
       searchTerm === '' || 
@@ -217,7 +217,7 @@ export const QuestionBankModal = memo<QuestionBankModalProps>(
                   />
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <select
@@ -229,7 +229,7 @@ export const QuestionBankModal = memo<QuestionBankModalProps>(
                   <option value="medium">Medium</option>
                   <option value="hard">Hard</option>
                 </select>
-                
+
                 <select
                   value={filters.type}
                   onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as 'mcq' | 'short_answer' | 'code' }))}
@@ -239,6 +239,16 @@ export const QuestionBankModal = memo<QuestionBankModalProps>(
                   <option value="short_answer">Short Answer</option>
                   <option value="code">Code</option>
                 </select>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  title="Refresh questions"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
             </div>
           </div>
