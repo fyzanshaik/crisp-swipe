@@ -1,0 +1,11 @@
+<svg width="512" height="512" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Crisp Swipe Icon (CR)">
+  <title>Crisp Swipe Icon</title>
+  <!-- Black square background -->
+  <rect width="256" height="256" rx="40" fill="#0b0b0f"/>
+  <!-- "CR" Monogram in white -->
+  <g fill="#ffffff">
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="128" font-weight="800" letter-spacing="2">CR</text>
+  </g>
+</svg>
+
+
