@@ -29,6 +29,10 @@ type ResumeData =
       canResume: true;
     }
   | {
+      error: string;
+      sessionStatus: "completed";
+    }
+  | {
       interview: {
         id: string;
         title: string;
@@ -128,7 +132,24 @@ export const SimpleResumeSelector = memo(function SimpleResumeSelector({
     );
   }
 
-  if ('sessionStatus' in data) {
+  if ('sessionStatus' in data && data.sessionStatus === 'completed') {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+          <h3 className="text-lg font-medium mb-2">Interview Already Completed</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            You have already completed this interview. Check your results in the Sessions tab.
+          </p>
+          <Button onClick={() => window.history.back()}>
+            Back to Dashboard
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if ('sessionStatus' in data && 'canResume' in data) {
     return (
       <Card>
         <CardContent className="p-6 text-center">
@@ -143,6 +164,10 @@ export const SimpleResumeSelector = memo(function SimpleResumeSelector({
         </CardContent>
       </Card>
     );
+  }
+
+  if (!('interview' in data)) {
+    return null;
   }
 
   return (

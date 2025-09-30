@@ -6,8 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Upload, CheckCircle, AlertCircle, Loader2, Send } from "lucide-react";
+import { toast } from "sonner";
 
-// Types - matching the dashboard Resume interface
 interface Resume {
   id: string;
   fileName: string;
@@ -133,14 +133,47 @@ export function ResumeUploadFlow({
     }
   };
 
-  // Handlers
+  const validateFile = (file: File): string | null => {
+    const validTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const maxSize = 5 * 1024 * 1024;
+
+    if (!validTypes.includes(file.type)) {
+      return "Invalid file type. Please upload a PDF or DOCX file.";
+    }
+
+    if (file.size > maxSize) {
+      return "File too large. Maximum size is 5MB.";
+    }
+
+    if (file.size === 0) {
+      return "File is empty. Please select a valid file.";
+    }
+
+    if (!file.name || file.name.length > 255) {
+      return "Invalid file name.";
+    }
+
+    return null;
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
     setFlowState("uploading");
 
-    // Simulate upload progress
     let progress = 0;
     const interval = setInterval(() => {
       progress += 10;
@@ -152,7 +185,11 @@ export function ResumeUploadFlow({
           onSuccess: handleUploadSuccess,
           onError: (error) => {
             console.error("Upload failed:", error);
+            toast.error(error.message || "Upload failed. Please try again.");
             setFlowState("initial");
+            if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
           },
         });
       }
@@ -211,7 +248,6 @@ export function ResumeUploadFlow({
               </p>
             </div>
 
-            {/* Existing Resumes (for interview mode) */}
             {mode === "interview" && existingResumes.length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">Use Existing Resume</h4>
@@ -254,7 +290,6 @@ export function ResumeUploadFlow({
               </div>
             )}
 
-            {/* Upload Section */}
             <div
               className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
               onClick={() => fileInputRef.current?.click()}
@@ -341,25 +376,24 @@ export function ResumeUploadFlow({
         return (
           <div className="space-y-4">
             <div className="text-center">
-              <AlertCircle className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
+              <AlertCircle className="h-8 w-8 mx-auto text-yellow-600 mb-2" />
               <h3 className="text-lg font-medium">Complete Your Resume</h3>
               <p className="text-sm text-muted-foreground">
                 Help us complete the missing information
               </p>
             </div>
 
-            {/* Chat Messages */}
-            <div className="border rounded-lg p-4 space-y-4 max-h-80 overflow-y-auto bg-gray-50">
+            <div className="border rounded-lg p-4 space-y-3 max-h-80 overflow-y-auto bg-muted/30">
               {chatMessages.map((message, index) => (
                 <div
                   key={index}
                   className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] p-3 rounded-xl text-sm shadow-sm ${
+                    className={`max-w-[80%] p-3 rounded-lg text-sm ${
                       message.role === "user"
-                        ? "bg-blue-600 text-white ml-4"
-                        : "bg-white text-gray-800 border mr-4"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card border text-card-foreground"
                     }`}
                   >
                     {message.content}
@@ -368,14 +402,13 @@ export function ResumeUploadFlow({
               ))}
               {chatMutation.isPending && (
                 <div className="flex justify-start">
-                  <div className="bg-white text-gray-800 border p-3 rounded-xl text-sm shadow-sm mr-4">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="bg-card border p-3 rounded-lg text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Chat Input */}
             <div className="flex gap-2">
               <Input
                 value={currentInput}
@@ -383,11 +416,12 @@ export function ResumeUploadFlow({
                 placeholder="Type your response..."
                 onKeyDown={(e) => e.key === "Enter" && handleChatSubmit()}
                 disabled={chatMutation.isPending}
+                className="flex-1"
               />
               <Button
                 onClick={handleChatSubmit}
                 disabled={!currentInput.trim() || chatMutation.isPending}
-                size="sm"
+                size="icon"
               >
                 <Send className="h-4 w-4" />
               </Button>

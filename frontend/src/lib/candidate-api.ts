@@ -35,9 +35,11 @@ export const candidateApi = {
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(
-        "error" in error ? String(error.error) : "Failed to upload resume",
-      );
+      const errorMessage =
+        "message" in error ? String(error.message) :
+        "error" in error ? String(error.error) :
+        "Failed to upload resume";
+      throw new Error(errorMessage);
     }
     return res.json();
   },
@@ -79,10 +81,23 @@ export const candidateApi = {
       param: { id: interviewId },
     });
     if (!res.ok) {
-      const error = await res.json();
+      const errorData = await res.json();
+      const hasError = errorData && typeof errorData === "object" && "error" in errorData;
+      const hasSessionStatus = errorData && typeof errorData === "object" && "sessionStatus" in errorData;
+
+      if (
+        res.status === 403 &&
+        hasSessionStatus &&
+        errorData.sessionStatus === "completed"
+      ) {
+        return {
+          error: hasError ? String(errorData.error) : "Interview already completed",
+          sessionStatus: "completed" as const,
+        };
+      }
       throw new Error(
-        "error" in error
-          ? String(error.error)
+        hasError
+          ? String(errorData.error)
           : "Failed to check resume eligibility",
       );
     }

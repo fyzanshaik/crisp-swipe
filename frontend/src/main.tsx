@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/use-auth";
 import "./index.css";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { Toaster } from "@/components/ui/sonner";
 
 scan({
   enabled: true,
@@ -50,6 +51,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <InnerApp />
+        <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,

@@ -121,6 +121,20 @@ const candidateRoute = new Hono()
 
       const extractedData = await extractResumeData(arrayBuffer, file.type);
 
+      if (!extractedData.isValidResume) {
+        const { deleteFile } = await import("../utils/r2.js");
+        await deleteFile(bucketKey);
+
+        return c.json(
+          {
+            error: "Invalid resume",
+            message: extractedData.invalidReason || "This document does not appear to be a valid resume. Please upload a proper resume with your professional information.",
+            documentType: extractedData.documentType,
+          },
+          400,
+        );
+      }
+
       const hasAllFields =
         extractedData.missing_fields.length === 0 &&
         extractedData.confidence.name > 0.8 &&

@@ -18,6 +18,9 @@ const regenerateQuestionSchema = z.object({
 });
 
 const resumeExtractionSchema = z.object({
+  isValidResume: z.boolean().describe("Whether this document is a valid resume/CV"),
+  documentType: z.enum(["resume", "cv", "other_document", "invalid"]).describe("Type of document detected"),
+  invalidReason: z.string().optional().describe("Reason why document is invalid (if isValidResume is false)"),
   name: z.string().describe("Full name of the person from the resume, empty string if not found"),
   email: z.string().describe("Email address from the resume, empty string if not found"),
   phone: z.string().describe("Phone number from the resume, empty string if not found"),
@@ -79,34 +82,26 @@ export const extractResumeData = async (
   fileData: ArrayBuffer,
   mimeType: string
 ) => {
+  const { extractTextFromFile } = await import("./text-extraction.js");
   const { models } = await import("./ai-models.js");
-  const model = models.gpt4o || models.gpt4omini || models.gemini25flash || models.gemini25flashlite;
+  const model = models.gpt4omini || models.gpt4o || models.gemini25flashlite || models.gemini25flash;
 
   if (!model) {
-    throw new Error("No file-processing capable AI model available. Please configure OpenAI or Google models.");
+    throw new Error("No AI model available for resume processing.");
   }
 
   try {
+    const extractedText = await extractTextFromFile(fileData, mimeType);
+
+    if (!extractedText || extractedText.length < 50) {
+      throw new Error("Document appears to be empty or too short to be a valid resume.");
+    }
+
     const { object } = await generateObject({
       model,
       schema: resumeExtractionSchema,
-      system: "You are an expert at extracting personal information from resumes. Extract the name, email, and phone number from the provided resume file. If any field is missing or unclear, mark it in the missing_fields array and give it a low confidence score.",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "file",
-              data: new Uint8Array(fileData),
-              mediaType: mimeType,
-            },
-            {
-              type: "text",
-              text: "Please extract the full name, email address, and phone number from this resume. If any information is missing or uncertain, please indicate that in the response."
-            }
-          ],
-        },
-      ],
+      system: "You are an expert at validating and extracting information from resumes. A valid resume/CV must contain professional information like work experience, education, or skills. Contact details (name, email, phone) are NOT required for validation - we can collect those separately. Mark isValidResume as false ONLY if the document is clearly not a resume (e.g., receipt, article, random text).",
+      prompt: `Analyze this document:\n\n${extractedText.slice(0, 4000)}\n\nIs this a valid resume/CV based on professional content? Extract name, email, and phone if available (they may be missing).`,
     });
 
     return object as z.infer<typeof resumeExtractionSchema>;

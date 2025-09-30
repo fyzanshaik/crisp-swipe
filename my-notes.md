@@ -8,7 +8,6 @@ Embedding models for question bank generation and better UX by using pgvector
 Using supermemoryai to build a memory brain - add on feature
 Email support? Could work
 UI Refresh
-Deployment setup
 
 Better errr message if I have already attempted an interview
 Fixing auto submit error at hard last question
