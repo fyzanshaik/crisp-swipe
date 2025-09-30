@@ -1,5 +1,6 @@
 import { memo, useRef, useEffect } from 'react';
-import Editor, { OnMount } from '@monaco-editor/react';
+import Editor, { type OnMount } from '@monaco-editor/react';
+import type { editor as MonacoEditor } from 'monaco-editor';
 
 interface CodeEditorProps {
   value: string;
@@ -16,7 +17,7 @@ export const CodeEditor = memo(function CodeEditor({
   disabled = false,
   language = 'javascript',
 }: CodeEditorProps) {
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
   const handleEditorMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
