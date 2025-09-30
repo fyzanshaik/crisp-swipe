@@ -1,53 +1,55 @@
 {
-  "name": "crisp-swipe",
-  "module": "server/index.ts",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "start": "bun server/index.ts",
-    "dev": "bun --watch server/index.ts",
-    "build": "cd frontend && bun install --frozen-lockfile && bun run build",
-    "postbuild": "bun run db-setup",
-    "db-push": "bun x drizzle-kit push",
-    "db-generate": "bun x drizzle-kit generate",
-    "db-migrate": "bun x drizzle-kit migrate",
-    "db-setup": "bun server/scripts/setup-db.ts",
-    "health": "curl http://localhost:3000/api/health",
-    "test": "bun test-server.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/pg": "^8.15.5",
-    "drizzle-kit": "^0.31.5",
-    "i": "^0.3.7",
-    "tsx": "^4.20.6",
-    "wrangler": "^4.40.2"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.20",
-    "@ai-sdk/cerebras": "^1.0.21",
-    "@ai-sdk/cohere": "^2.0.12",
-    "@ai-sdk/google": "^2.0.17",
-    "@ai-sdk/groq": "^2.0.22",
-    "@ai-sdk/mistral": "^2.0.17",
-    "@ai-sdk/openai": "^2.0.38",
-    "@aws-sdk/client-s3": "^3.896.0",
-    "@hono/zod-validator": "^0.7.3",
-    "@openrouter/ai-sdk-provider": "^1.2.0",
-    "@supermemory/ai-sdk": "^1.0.8",
-    "ai": "^5.0.56",
-    "bcrypt": "^6.0.0",
-    "dotenv": "^17.2.2",
-    "drizzle-orm": "^0.44.5",
-    "drizzle-zod": "^0.8.3",
-    "hono": "^4.9.9",
-    "mammoth": "^1.11.0",
-    "pdf-parse": "^1.1.1",
-    "pg": "^8.16.3",
-    "workers-ai-provider": "^2.0.0",
-    "zod": "^4.1.11"
-  }
+	"name": "crisp-swipe",
+	"module": "server/index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"start": "bun server/index.ts",
+		"dev": "bun --watch server/index.ts",
+		"build": "cd frontend && bun install --frozen-lockfile && bun run build",
+		"postbuild": "bun run db-setup",
+		"db-push": "bun x drizzle-kit push",
+		"db-generate": "bun x drizzle-kit generate",
+		"db-migrate": "bun x drizzle-kit migrate",
+		"db-setup": "bun server/scripts/setup-db.ts",
+		"health": "curl http://localhost:3000/api/health",
+		"test": "bun test-server.ts",
+		"dbml": "tsx ./server/db/dbml.ts"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/pg": "^8.15.5",
+		"drizzle-dbml-generator": "^0.10.0",
+		"drizzle-kit": "^0.31.5",
+		"i": "^0.3.7",
+		"tsx": "^4.20.6",
+		"wrangler": "^4.40.2"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@ai-sdk/anthropic": "^2.0.20",
+		"@ai-sdk/cerebras": "^1.0.21",
+		"@ai-sdk/cohere": "^2.0.12",
+		"@ai-sdk/google": "^2.0.17",
+		"@ai-sdk/groq": "^2.0.22",
+		"@ai-sdk/mistral": "^2.0.17",
+		"@ai-sdk/openai": "^2.0.38",
+		"@aws-sdk/client-s3": "^3.896.0",
+		"@hono/zod-validator": "^0.7.3",
+		"@openrouter/ai-sdk-provider": "^1.2.0",
+		"@supermemory/ai-sdk": "^1.0.8",
+		"ai": "^5.0.56",
+		"bcrypt": "^6.0.0",
+		"dotenv": "^17.2.2",
+		"drizzle-orm": "^0.44.5",
+		"drizzle-zod": "^0.8.3",
+		"hono": "^4.9.9",
+		"mammoth": "^1.11.0",
+		"pdf-parse": "^1.1.1",
+		"pg": "^8.16.3",
+		"workers-ai-provider": "^2.0.0",
+		"zod": "^4.1.11"
+	}
 }

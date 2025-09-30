@@ -1,0 +1,140 @@
+table answers {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  session_id uuid [not null]
+  question_id uuid [not null]
+  answer_text text [not null]
+  score integer
+  feedback jsonb
+  evaluated boolean [default: false]
+  evaluated_at timestamp
+  ai_model_used varchar(50)
+  time_taken integer
+  submitted_at timestamp [default: `now()`]
+
+  indexes {
+    (session_id, question_id) [name: 'answers_session_id_question_id_unique', unique]
+  }
+}
+
+table interview_questions {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  interview_id uuid [not null]
+  question_id uuid [not null]
+  order_index integer [not null]
+  points integer [not null]
+
+  indexes {
+    (interview_id, question_id) [name: 'interview_questions_interview_id_question_id_unique', unique]
+    (interview_id, order_index) [name: 'interview_questions_interview_id_order_index_unique', unique]
+  }
+}
+
+table interview_sessions {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  interview_id uuid [not null]
+  user_id uuid [not null]
+  resume_id uuid [not null]
+  current_question_index integer [default: 0]
+  status varchar(50) [default: 'not_started']
+  session_token varchar(255) [not null, unique]
+  locked_until timestamp
+  started_at timestamp
+  completed_at timestamp
+  final_score integer
+  max_score integer
+  percentage "numeric(5, 2)"
+  ai_summary text
+  evaluated_at timestamp
+  recruiter_notes text
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (user_id, interview_id) [name: 'interview_sessions_user_id_interview_id_unique', unique]
+  }
+}
+
+table interviews {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  title varchar(255) [not null]
+  description text
+  job_role varchar(100) [not null]
+  is_public boolean [default: false]
+  assigned_emails jsonb
+  deadline timestamp
+  status varchar(50) [default: 'draft']
+  created_by uuid [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  published_at timestamp
+}
+
+table questions {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  type varchar(50) [not null]
+  difficulty varchar(50) [not null]
+  category varchar(100)
+  question_text text [not null]
+  options jsonb
+  correct_answer text
+  expected_keywords jsonb
+  min_words integer
+  max_words integer
+  language varchar(50)
+  starter_code text
+  sample_solution text
+  evaluation_criteria jsonb
+  time_limit integer [not null]
+  points integer [not null]
+  created_by uuid
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+table resumes {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id uuid [not null]
+  bucket_key varchar(500) [not null]
+  file_name varchar(255) [not null]
+  file_type varchar(50) [not null]
+  file_size integer [not null]
+  content_hash varchar(64)
+  extracted_name varchar(255) [not null]
+  extracted_email varchar(255) [not null]
+  extracted_phone varchar(20) [not null]
+  verification_method varchar(50) [not null]
+  missing_fields jsonb
+  retry_count integer [default: 0]
+  uploaded_at timestamp [default: `now()`]
+  verified_at timestamp [default: `now()`]
+}
+
+table users {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  email varchar(255) [not null, unique]
+  password_hash varchar(255) [not null]
+  name varchar(255) [not null]
+  phone varchar(20)
+  role varchar(20) [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+ref: answers.session_id > interview_sessions.id
+
+ref: answers.question_id > questions.id
+
+ref: interview_questions.interview_id > interviews.id
+
+ref: interview_questions.question_id > questions.id
+
+ref: interview_sessions.interview_id > interviews.id
+
+ref: interview_sessions.user_id > users.id
+
+ref: interview_sessions.resume_id - resumes.id
+
+ref: interviews.created_by > users.id
+
+ref: questions.created_by > users.id
+
+ref: resumes.user_id > users.id
