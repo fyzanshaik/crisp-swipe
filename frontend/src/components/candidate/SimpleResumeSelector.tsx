@@ -2,11 +2,12 @@ import { memo, useCallback, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Upload, AlertCircle } from 'lucide-react';
+import { CheckCircle, Upload, AlertCircle, Loader2 } from 'lucide-react';
 import { useInterviewStore } from '@/stores/interview-store';
 import { candidateMutations } from '@/lib/candidate-queries';
 import { ResumeUploadFlow } from './ResumeUploadFlow';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface Resume {
   id: string;
@@ -58,6 +59,8 @@ export const SimpleResumeSelector = memo(function SimpleResumeSelector({
   const startInterviewMutation = candidateMutations.useStartInterview();
   const uploadMutation = candidateMutations.useUploadResume();
   const [verifyingResume, setVerifyingResume] = useState<Resume | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleResumeSelect = useCallback((resumeId: string) => {
     setCurrentStep('ready');
@@ -65,12 +68,63 @@ export const SimpleResumeSelector = memo(function SimpleResumeSelector({
     localStorage.setItem('selectedResumeId', resumeId);
   }, [setCurrentStep]);
 
+  const validateFile = useCallback((file: File): string | null => {
+    const validTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const maxSize = 5 * 1024 * 1024;
+
+    if (!validTypes.includes(file.type)) {
+      return "Invalid file type. Please upload a PDF or DOCX file.";
+    }
+
+    if (file.size > maxSize) {
+      return "File too large. Maximum size is 5MB.";
+    }
+
+    if (file.size === 0) {
+      return "File is empty. Please select a valid file.";
+    }
+
+    if (!file.name || file.name.length > 255) {
+      return "Invalid file name.";
+    }
+
+    return null;
+  }, []);
+
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    // Simulate upload progress
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setUploadProgress(progress);
+      if (progress >= 90) {
+        clearInterval(interval);
+      }
+    }, 200);
+
     try {
       const result = await uploadMutation.mutateAsync(file);
+
+      clearInterval(interval);
+      setUploadProgress(100);
 
       // Invalidate queries to refresh the UI after upload
       queryClient.invalidateQueries({
@@ -80,13 +134,24 @@ export const SimpleResumeSelector = memo(function SimpleResumeSelector({
         queryKey: ["candidate", "resumes"]
       });
 
-      if (result.status === 'verified') {
-        handleResumeSelect(result.resume.id);
-      }
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploadProgress(0);
+        if (result.status === 'verified') {
+          handleResumeSelect(result.resume.id);
+        }
+      }, 500);
     } catch (error) {
+      clearInterval(interval);
       console.error('Upload failed:', error);
+      toast.error(error instanceof Error ? error.message : "Upload failed. Please try again.");
+      setIsUploading(false);
+      setUploadProgress(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
-  }, [uploadMutation, handleResumeSelect, queryClient, interviewId]);
+  }, [uploadMutation, handleResumeSelect, queryClient, interviewId, validateFile]);
 
   const handleIncompleteResumeClick = useCallback((resume: Resume) => {
     setVerifyingResume(resume);
@@ -174,19 +239,39 @@ export const SimpleResumeSelector = memo(function SimpleResumeSelector({
     <div className="space-y-6">
       <Card>
         <CardContent className="p-6">
-          <div
-            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
-            <h4 className="font-medium mb-2">Upload New Resume</h4>
-            <p className="text-sm text-muted-foreground mb-4">
-              PDF or DOCX file (max 5MB)
-            </p>
-            <Button disabled={uploadMutation.isPending}>
-              {uploadMutation.isPending ? 'Uploading...' : 'Choose File'}
-            </Button>
-          </div>
+          {isUploading ? (
+            <div className="text-center space-y-4 py-4">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <h3 className="text-lg font-medium">
+                {uploadProgress < 90 ? 'Uploading Resume' : 'Processing Resume'}
+              </h3>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {uploadProgress < 90
+                  ? `${uploadProgress}% uploaded`
+                  : 'AI is extracting your information...'}
+              </p>
+            </div>
+          ) : (
+            <div
+              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
+              <h4 className="font-medium mb-2">Upload New Resume</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                PDF or DOCX file (max 5MB)
+              </p>
+              <Button disabled={uploadMutation.isPending}>
+                {uploadMutation.isPending ? 'Uploading...' : 'Choose File'}
+              </Button>
+            </div>
+          )}
           <input
             ref={fileInputRef}
             type="file"
