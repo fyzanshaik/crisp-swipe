@@ -71,101 +71,131 @@ export const ReadyToStartStep = memo(function ReadyToStartStep({
   const { interview } = interviewDetails;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Target className="h-8 w-8 text-primary" />
+    <div className="max-w-4xl mx-auto space-y-6">
+      <Card className="border-2">
+        <CardContent className="p-8">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Target className="h-10 w-10 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">{interview.title}</h3>
-            <p className="text-muted-foreground">Ready to start your interview</p>
+            <h2 className="text-3xl font-bold mb-2">{interview.title}</h2>
+            <p className="text-lg text-muted-foreground">Ready to begin your interview</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{interview.totalQuestions}</div>
-              <div className="text-xs text-muted-foreground">Questions</div>
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            <div className="text-center p-4 rounded-lg bg-card border-2">
+              <div className="text-3xl font-bold text-primary mb-1">{interview.totalQuestions}</div>
+              <div className="text-sm font-medium text-muted-foreground">Questions</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">
+            <div className="text-center p-4 rounded-lg bg-card border-2">
+              <div className="text-3xl font-bold text-primary mb-1">
                 {Math.round(interview.totalTime / 60)}m
               </div>
-              <div className="text-xs text-muted-foreground">Duration</div>
+              <div className="text-sm font-medium text-muted-foreground">Total Time</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{interview.totalPoints}</div>
-              <div className="text-xs text-muted-foreground">Points</div>
+            <div className="text-center p-4 rounded-lg bg-card border-2">
+              <div className="text-3xl font-bold text-primary mb-1">{interview.totalPoints}</div>
+              <div className="text-sm font-medium text-muted-foreground">Total Points</div>
             </div>
           </div>
 
-          <div className="space-y-3 mb-6">
-            <h4 className="font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Question Breakdown
-            </h4>
-            {interview.questionsSummary.map((q, i) => (
-              <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-xs">
-                    {q.type.toUpperCase()}
-                  </Badge>
-                  <Badge
-                    variant={
-                      q.difficulty === 'easy'
-                        ? 'default'
-                        : q.difficulty === 'medium'
-                          ? 'secondary'
-                          : 'destructive'
-                    }
-                    className="text-xs"
-                  >
-                    {q.difficulty}
-                  </Badge>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Question Overview</h3>
+            </div>
+            <div className="space-y-3">
+              {interview.questionsSummary.map((q, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border-2 rounded-lg bg-card hover:border-primary/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-muted-foreground">Q{i + 1}</span>
+                    <Badge variant="secondary" className="text-sm px-3 py-1">
+                      {q.type === 'mcq' ? 'Multiple Choice' : q.type === 'short_answer' ? 'Short Answer' : 'Coding'}
+                    </Badge>
+                    <Badge
+                      className={`text-sm px-3 py-1 ${
+                        q.difficulty === 'easy'
+                          ? 'bg-green-500/10 text-green-600 border-green-500'
+                          : q.difficulty === 'medium'
+                            ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500'
+                            : 'bg-red-500/10 text-red-600 border-red-500'
+                      }`}
+                    >
+                      {q.difficulty.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-6 text-sm font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>{q.timeLimit}s</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Target className="h-4 w-4 text-muted-foreground" />
+                      <span>{q.points} pts</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>{q.timeLimit}s</span>
-                  <span>{q.points} pts</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-yellow-200 bg-yellow-50/50">
+      <Card className="border-2 border-yellow-500/50 bg-card">
         <CardContent className="p-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-            <div className="space-y-2 text-sm">
-              <h4 className="font-medium text-yellow-800">Important Guidelines</h4>
-              <ul className="space-y-1 text-yellow-700">
-                <li>• Once started, you cannot pause or restart the interview</li>
-                <li>• Each question has a strict time limit with auto-submission</li>
-                <li>• You must answer questions in sequential order</li>
-                <li>• Refreshing the page will resume from where you left off</li>
-                <li>• Ensure stable internet connection throughout</li>
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-yellow-500/10 rounded-full flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Important Guidelines</h3>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                  <span>Once started, you cannot pause or restart the interview</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                  <span>Each question has a strict time limit with automatic submission</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                  <span>You must spend minimum 50% of time limit before submitting</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                  <span>Questions must be answered in sequential order</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                  <span>Your progress is automatically saved - refresh to resume</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-600 font-bold mt-0.5">•</span>
+                  <span>Ensure stable internet connection throughout the interview</span>
+                </li>
               </ul>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={handleGoBack} className="flex-1">
+      <div className="flex gap-4">
+        <Button variant="outline" onClick={handleGoBack} size="lg" className="flex-1">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Change Resume
         </Button>
         <Button
           onClick={handleStartInterview}
           disabled={startInterviewMutation.isPending}
-          className="flex-1"
+          size="lg"
+          className="flex-1 text-lg"
         >
           {startInterviewMutation.isPending ? (
-            'Starting...'
+            'Starting Interview...'
           ) : (
             <>
-              <Play className="h-4 w-4 mr-2" />
+              <Play className="h-5 w-5 mr-2" />
               Start Interview
             </>
           )}

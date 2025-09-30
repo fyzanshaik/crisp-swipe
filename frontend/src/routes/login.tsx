@@ -45,7 +45,6 @@ function Login() {
       if (search.redirect) {
         navigate({ to: search.redirect });
       } else {
-        // Force a page reload to ensure auth state is properly updated
         window.location.href = '/dashboard';
       }
     },
@@ -61,7 +60,6 @@ function Login() {
            if (search.redirect) {
              navigate({ to: search.redirect });
            } else {
-             // Force a page reload to ensure auth state is properly updated
              window.location.href = '/dashboard';
            }
          } catch (error) {
@@ -73,18 +71,18 @@ function Login() {
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Brain className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">Crisp</span>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Welcome Back</h1>
-          <p className="text-muted-foreground">Sign in to your account</p>
+          <Link to="/" className="inline-flex items-center justify-center space-x-2 mb-6 hover:opacity-80 transition-opacity">
+            <Brain className="h-10 w-10 text-primary" />
+            <span className="text-3xl font-bold text-foreground">Crisp</span>
+          </Link>
+          <h1 className="text-4xl font-bold text-foreground mb-2">Welcome Back</h1>
+          <p className="text-lg text-muted-foreground">Sign in to continue your journey</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Login</CardTitle>
-            <CardDescription>
+        <Card className="border-2 shadow-xl">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-2xl">Login</CardTitle>
+            <CardDescription className="text-base">
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
@@ -164,46 +162,54 @@ function Login() {
               />
             </form>
             
-            <div className="mt-6 space-y-3">
+            <div className="mt-6 space-y-4">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Or try demo accounts
+                <div className="relative flex justify-center text-sm uppercase">
+                  <span className="bg-background px-3 text-muted-foreground font-medium">
+                    Demo Accounts
                   </span>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-2">
+
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"
                   onClick={() => handleAutoLogin("swipeuser@gmail.com", "11111111")}
-                  className="text-sm"
                   disabled={auth.isLoading}
+                  className="h-auto py-3 flex flex-col items-center gap-1"
                 >
                   {auth.isLoading ? (
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  ) : null}
-                  Swipe Candidate
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span className="font-semibold">Candidate</span>
+                      <span className="text-xs text-muted-foreground">Quick Login</span>
+                    </>
+                  )}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleAutoLogin("swipeadmin@gmail.com", "11111111")}
-                  className="text-sm"
                   disabled={auth.isLoading}
+                  className="h-auto py-3 flex flex-col items-center gap-1"
                 >
                   {auth.isLoading ? (
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  ) : null}
-                  Swipe Recruiter
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span className="font-semibold">Recruiter</span>
+                      <span className="text-xs text-muted-foreground">Quick Login</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
-            
-            <div className="mt-4 text-center">
-              <Button asChild variant="outline">
+
+            <div className="mt-6 text-center space-y-3">
+              <Button asChild variant="ghost" className="w-full">
                 <Link to="/">Back to Home</Link>
               </Button>
             </div>

@@ -14,43 +14,43 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Brain className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">Crisp</span>
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-5xl">
+        <header className="bg-background/80 backdrop-blur-md border-2 border-white/20 rounded-full shadow-lg px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Brain className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold text-foreground">Crisp</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <ModeToggle />
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-muted-foreground hidden sm:inline">
+                    Hello, {user?.name}!
+                  </span>
+                  <Button asChild size="sm">
+                    <Link to="/dashboard">Dashboard</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => logout()}>
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Button asChild variant="ghost" size="sm">
+                    <Link to="/login">Login</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link to="/register">Get Started</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <ModeToggle />
-            {isAuthenticated ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-muted-foreground">
-                  Hello, {user?.name}!
-                </span>
-                <Button asChild>
-                  <Link to="/dashboard">
-                    Dashboard
-                  </Link>
-                </Button>
-                <Button variant="outline" onClick={() => logout()}>
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <div className="space-x-2">
-                <Button asChild variant="ghost">
-                  <Link to="/login">Login</Link>
-                </Button>
-                <Button asChild>
-                  <Link to="/register">Get Started</Link>
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
-      <section className="container mx-auto px-4 py-20 text-center">
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 text-center">
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="space-y-4">
             <h1 className="text-5xl md:text-7xl font-bold text-foreground">
@@ -73,7 +73,7 @@ function Index() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-20">
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Why Choose Crisp?
@@ -146,7 +146,7 @@ function Index() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-20">
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-12 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -167,8 +167,8 @@ function Index() {
         </Card>
       </section>
 
-      <footer className="border-t bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-8">
+      <footer className="border-t bg-background/95 backdrop-blur-sm">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <Brain className="h-6 w-6 text-primary" />

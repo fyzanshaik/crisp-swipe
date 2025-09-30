@@ -22,11 +22,9 @@ interface Step1BasicInfoProps {
 
 export const Step1BasicInfo = memo<Step1BasicInfoProps>(
   ({ formData, errors, onUpdate, onNext, onCancel }) => {
-    console.log('🔄 Step1BasicInfo rendering', { title: formData.title, jobRole: formData.jobRole });
-    
     const [localTitle, setLocalTitle] = useState(formData.title);
     const [localDescription, setLocalDescription] = useState(formData.description);
-    
+
     const debouncedTitle = useDebounce(localTitle, 300);
     const debouncedDescription = useDebounce(localDescription, 500);
 
@@ -34,22 +32,13 @@ export const Step1BasicInfo = memo<Step1BasicInfoProps>(
       if (debouncedTitle !== formData.title) {
         onUpdate({ title: debouncedTitle });
       }
-    }, [debouncedTitle, formData.title, onUpdate]);
+    }, [debouncedTitle]);
 
     useEffect(() => {
       if (debouncedDescription !== formData.description) {
         onUpdate({ description: debouncedDescription });
       }
-    }, [debouncedDescription, formData.description, onUpdate]);
-
-    // Sync local state with form data when it changes externally
-    useEffect(() => {
-      setLocalTitle(formData.title);
-    }, [formData.title]);
-
-    useEffect(() => {
-      setLocalDescription(formData.description);
-    }, [formData.description]);
+    }, [debouncedDescription]);
 
     const handleTitleChange = useCallback((value: string) => {
       setLocalTitle(value);  
@@ -69,17 +58,20 @@ export const Step1BasicInfo = memo<Step1BasicInfoProps>(
 
     return (
       <>
-        <DialogHeader>
-          <DialogTitle className="text-xl flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Create New Interview
-          </DialogTitle>
-          <DialogDescription>
-            Step 1 of 3: Set up the basic information for your interview
-          </DialogDescription>
-        </DialogHeader>
+        <div className="px-8 pt-6 pb-5 border-b">
+          <DialogHeader>
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <FileText className="h-6 w-6" />
+              Create New Interview
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Step 1 of 3: Set up the basic information for your interview
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-4 py-4">
+        <div className="overflow-y-auto px-8 py-6" style={{ maxHeight: 'calc(95vh - 280px)' }}>
+          <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title" className="text-sm font-medium">
               Interview Title *
@@ -160,19 +152,24 @@ export const Step1BasicInfo = memo<Step1BasicInfoProps>(
               </div>
             </div>
           )}
+          </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={onNext}
-            disabled={!canProceed}
-          >
-            Next: Add Questions
-          </Button>
-        </DialogFooter>
+        <div className="px-8 py-5 border-t bg-muted/30">
+          <DialogFooter className="gap-2 sm:gap-3">
+            <Button variant="outline" onClick={onCancel} size="lg">
+              Cancel
+            </Button>
+            <Button
+              onClick={onNext}
+              disabled={!canProceed}
+              className="min-w-[180px]"
+              size="lg"
+            >
+              Next: Add Questions
+            </Button>
+          </DialogFooter>
+        </div>
       </>
     );
   }

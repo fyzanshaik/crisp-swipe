@@ -113,17 +113,20 @@ export const Step3Metadata = memo<Step3MetadataProps>(
 
     return (
       <>
-        <DialogHeader>
-          <DialogTitle className="text-xl flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Interview Settings
-          </DialogTitle>
-          <DialogDescription>
-            Step 3 of 3: Configure candidate access and publish your interview
-          </DialogDescription>
-        </DialogHeader>
+        <div className="px-8 pt-6 pb-5 border-b">
+          <DialogHeader>
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <Settings className="h-6 w-6" />
+              Interview Settings
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Step 3 of 3: Configure candidate access and publish your interview
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
+        <div className="overflow-y-auto px-8 py-6" style={{ maxHeight: 'calc(95vh - 280px)' }}>
+          <div className="space-y-6">
           <div className="bg-muted/30 rounded-lg p-4 border">
             <h3 className="font-medium mb-3 flex items-center gap-2">
               <Eye className="h-4 w-4" />
@@ -296,30 +299,37 @@ export const Step3Metadata = memo<Step3MetadataProps>(
               </div>
             </div>
           </div>
+          </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onBack} disabled={isLoading}>
-            Back
-          </Button>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              onClick={handleSaveDraft}
-              disabled={isLoading}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {isLoading ? 'Saving...' : 'Save Draft'}
+        <div className="px-8 py-5 border-t bg-muted/30">
+          <DialogFooter className="gap-2 sm:gap-3">
+            <Button variant="outline" onClick={onBack} disabled={isLoading} size="lg">
+              Back
             </Button>
-            <Button 
-              onClick={handlePublishNow}
-              disabled={isLoading}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              {isLoading ? 'Publishing...' : 'Publish Now'}
-            </Button>
-          </div>
-        </DialogFooter>
+            <div className="flex gap-2 sm:gap-3">
+              <Button
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={isLoading}
+                size="lg"
+                className="min-w-[140px]"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {isLoading ? 'Saving...' : 'Save Draft'}
+              </Button>
+              <Button
+                onClick={handlePublishNow}
+                disabled={isLoading}
+                size="lg"
+                className="min-w-[160px]"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {isLoading ? 'Publishing...' : 'Publish Now'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </div>
       </>
     );
   }

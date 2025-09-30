@@ -36,7 +36,6 @@ const initialFormData: CreateInterviewFormData = {
 
 export const CreateInterviewModal = memo<CreateInterviewModalProps>(
   ({ open, onOpenChange, onInterviewCreated }) => {
-    console.log('🔄 CreateInterviewModal rendering', { open });
     const [currentStep, setCurrentStep] = useState<CreateInterviewStep>(1);
     const [formData, setFormData] = useState<CreateInterviewFormData>(initialFormData);
     const [errors, setErrors] = useState<ValidationErrors>({});
@@ -53,7 +52,6 @@ export const CreateInterviewModal = memo<CreateInterviewModalProps>(
     }, [onOpenChange]);
 
     const updateFormData = useCallback((updates: Partial<CreateInterviewFormData>) => {
-      console.log('📝 updateFormData called with:', Object.keys(updates));
       setFormData(prev => ({ ...prev, ...updates }));
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -110,9 +108,8 @@ export const CreateInterviewModal = memo<CreateInterviewModalProps>(
     }, [formData.isPublic, formData.assignedEmails.length, formData.deadline]);
 
     const goToNextStep = useCallback(() => {
-      console.log('➡️ goToNextStep called, current step:', currentStep);
       let isValid = false;
-      
+
       switch (currentStep) {
         case 1:
           isValid = validateStep1();
@@ -131,10 +128,9 @@ export const CreateInterviewModal = memo<CreateInterviewModalProps>(
     }, [currentStep, validateStep1, validateStep2, validateStep3]);
 
     const goToPreviousStep = useCallback(() => {
-      console.log('⬅️ goToPreviousStep called, current step:', currentStep);
       if (currentStep > 1) {
         setCurrentStep(prev => (prev - 1) as CreateInterviewStep);
-        setErrors({}); 
+        setErrors({});
       }
     }, [currentStep]);
 
@@ -156,15 +152,17 @@ export const CreateInterviewModal = memo<CreateInterviewModalProps>(
 
         const createdInterview = await recruiterApi.createInterview(interviewData);
 
-        const validQuestions = formData.selectedQuestions.filter(q => q !== null) as Question[];
-        if (validQuestions.length > 0) {
-          const questionsToAssign = validQuestions.map((q, index) => ({
-            questionId: q.id,
-            orderIndex: index,
-            points: q.points
-          }));
+        const questionsToAssign = formData.selectedQuestions
+          .map((q, originalIndex) =>
+            q ? {
+              questionId: q.id,
+              orderIndex: originalIndex,
+              points: q.points
+            } : null
+          )
+          .filter((q): q is { questionId: string; orderIndex: number; points: number } => q !== null);
 
-          console.log('🎯 Assigning questions to interview:', questionsToAssign);
+        if (questionsToAssign.length > 0) {
           await recruiterApi.assignQuestions(createdInterview.interview.id, questionsToAssign);
         }
 
@@ -227,15 +225,15 @@ export const CreateInterviewModal = memo<CreateInterviewModalProps>(
 
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] overflow-hidden p-0 gap-0">
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh] overflow-hidden p-0 gap-0">
           <div className="relative h-1 bg-muted">
-            <div 
+            <div
               className="absolute left-0 top-0 h-full bg-primary transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
-          
-          <div className="px-8 py-6">
+
+          <div className="flex flex-col h-full">
             {renderStep()}
           </div>
         </DialogContent>

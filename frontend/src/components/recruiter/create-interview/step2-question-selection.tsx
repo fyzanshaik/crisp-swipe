@@ -157,41 +157,71 @@ const QuestionSection = memo<{
   onRemove: (index: number) => void;
   onSelectFromBank: (index: number) => void;
   regeneratingIndex: number | null;
-}>(({ title, difficulty, questions, expectedType, onRegenerate, onRemove, onSelectFromBank }) => (
-  <div className="space-y-3">
-    <h3 className="font-medium text-sm flex items-center gap-2">
-      {title}
-      <span className="text-xs text-muted-foreground">({questions.length} questions)</span>
-    </h3>
-    <div className="space-y-2">
-      {questions.map((question, index) => (
-        <QuestionSlot
-          key={index}
-          question={question}
-          index={index}
-          difficulty={difficulty}
-          type={expectedType}
-          onRegenerate={() => onRegenerate(index)}
-          onRemove={() => onRemove(index)}
-          onSelectFromBank={() => onSelectFromBank(index)}
-          isRegenerating={false}
-        />
-      ))}
+  isGenerating?: boolean;
+}>(({ title, difficulty, questions, expectedType, onRegenerate, onRemove, onSelectFromBank, isGenerating }) => {
+  const getDifficultyStyles = () => {
+    switch (difficulty) {
+      case 'easy': return 'border-l-green-500';
+      case 'medium': return 'border-l-yellow-500';
+      case 'hard': return 'border-l-red-500';
+    }
+  };
+
+  return (
+    <div className={`border-l-4 rounded-lg p-5 bg-card border ${getDifficultyStyles()}`}>
+      <h3 className="font-semibold text-base mb-4 flex items-center gap-2">
+        {title}
+        <span className="text-xs font-normal text-muted-foreground">({questions.filter(q => q !== null).length}/{questions.length})</span>
+      </h3>
+      <div className="grid gap-3">
+        {isGenerating ? (
+          <>
+            {questions.map((_, index) => (
+              <div key={index} className="border rounded-lg p-4 bg-muted/30 animate-pulse">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-5 w-8 bg-muted rounded"></div>
+                      <div className="h-5 w-12 bg-muted rounded-full"></div>
+                      <div className="h-5 w-16 bg-muted rounded"></div>
+                    </div>
+                    <div className="h-4 bg-muted rounded w-3/4"></div>
+                    <div className="h-4 bg-muted rounded w-1/2"></div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-3 w-12 bg-muted rounded"></div>
+                      <div className="h-3 w-12 bg-muted rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            {questions.map((question, index) => (
+              <QuestionSlot
+                key={index}
+                question={question}
+                index={index}
+                difficulty={difficulty}
+                type={expectedType}
+                onRegenerate={() => onRegenerate(index)}
+                onRemove={() => onRemove(index)}
+                onSelectFromBank={() => onSelectFromBank(index)}
+                isRegenerating={false}
+              />
+            ))}
+          </>
+        )}
+      </div>
     </div>
-  </div>
-));
+  );
+});
 
 QuestionSection.displayName = "QuestionSection";
 
 export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
   ({ formData, errors, onUpdate, onNext, onBack }) => {
-    console.log('🔄 Step2QuestionSelection rendering', { 
-      questionsCount: formData.selectedQuestions.filter(q => q !== null).length,
-      questions: formData.selectedQuestions.map((q, i) => ({ 
-        slot: i, 
-        question: q ? { id: q.id, difficulty: q.difficulty } : null 
-      }))
-    });
     const [isGeneratingAll, setIsGeneratingAll] = useState(false);
     const [regenerateModal, setRegenerateModal] = useState<{
       open: boolean;
@@ -206,28 +236,20 @@ export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
     }>({ open: false, difficulty: 'easy', type: 'mcq', globalIndex: null });
 
     const organizeQuestions = () => {
-      console.log('🎯 organizeQuestions called with:', formData.selectedQuestions);
-      
       const organized = {
         easy: [
-          formData.selectedQuestions[0] || null,    // Slot 0
-          formData.selectedQuestions[1] || null     // Slot 1
+          formData.selectedQuestions[0] || null,
+          formData.selectedQuestions[1] || null
         ] as (Question | null)[],
         medium: [
-          formData.selectedQuestions[2] || null,    // Slot 2
-          formData.selectedQuestions[3] || null     // Slot 3
+          formData.selectedQuestions[2] || null,
+          formData.selectedQuestions[3] || null
         ] as (Question | null)[],
         hard: [
-          formData.selectedQuestions[4] || null,    // Slot 4
-          formData.selectedQuestions[5] || null     // Slot 5
+          formData.selectedQuestions[4] || null,
+          formData.selectedQuestions[5] || null
         ] as (Question | null)[]
       };
-
-      console.log('🎯 Organized questions:', {
-        easy: organized.easy.map(q => q ? { id: q.id, difficulty: q.difficulty } : null),
-        medium: organized.medium.map(q => q ? { id: q.id, difficulty: q.difficulty } : null),
-        hard: organized.hard.map(q => q ? { id: q.id, difficulty: q.difficulty } : null)
-      });
 
       return organized;
     };
@@ -278,11 +300,6 @@ export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
             hardCount++;
           }
         });
-
-        console.log('🎯 Generated questions organized into slots:', organizedQuestions.map((q, i) => ({
-          slot: i,
-          question: q ? { id: q.id, difficulty: q.difficulty } : null
-        })));
 
         onUpdate({ selectedQuestions: organizedQuestions });
         toast.success(`Generated ${result.questions.length} questions successfully`);
@@ -394,43 +411,45 @@ export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
 
     return (
       <>
-        <DialogHeader>
-          <DialogTitle className="text-xl flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            Generate Questions
-          </DialogTitle>
-          <DialogDescription>
-            Step 2 of 3: Generate AI-powered questions for your {formData.jobRole} interview
-          </DialogDescription>
-        </DialogHeader>
+        <div className="px-8 pt-6 pb-5 border-b">
+          <DialogHeader>
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <Sparkles className="h-6 w-6" />
+              Generate Questions
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Step 2 of 3: Generate AI-powered questions for your {formData.jobRole} interview
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-6 py-4 max-h-[65vh] overflow-y-auto">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-5">
             <div className="space-y-1">
-              <h3 className="font-medium">Interview Questions ({totalQuestions}/6)</h3>
+              <h3 className="font-semibold text-lg">Interview Questions <span className="text-primary">({totalQuestions}/6)</span></h3>
               <p className="text-sm text-muted-foreground">
-                Generate 6 balanced questions: 2 Easy (MCQ), 2 Medium (Short Answer), 2 Hard (Code)
-                </p>
-              </div>
-              <Button 
-                onClick={handleGenerateAllQuestions}
-                disabled={isGeneratingAll}
-              size="sm"
-              >
-                {isGeneratingAll ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate All Questions
-                  </>
-                )}
-              </Button>
+                2 Easy (MCQ) • 2 Medium (Short Answer) • 2 Hard (Code)
+              </p>
             </div>
+            <Button
+              onClick={handleGenerateAllQuestions}
+              disabled={isGeneratingAll}
+              size="lg"
+            >
+              {isGeneratingAll ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate All
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
 
+        <div className="overflow-y-auto px-8 py-6" style={{ maxHeight: 'calc(95vh - 300px)' }}>
           <div className="space-y-6">
             <QuestionSection
               title="Easy Questions (MCQ)"
@@ -438,19 +457,20 @@ export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
               questions={questions.easy}
               expectedType="mcq"
               onRegenerate={(slotIndex) => {
-                const globalIndex = formData.selectedQuestions.findIndex((q) => 
+                const globalIndex = formData.selectedQuestions.findIndex((q) =>
                   q === questions.easy[slotIndex]
                 );
                 if (globalIndex !== -1) handleRegenerateQuestion(globalIndex);
               }}
               onRemove={(slotIndex) => {
-                const globalIndex = formData.selectedQuestions.findIndex((q) => 
+                const globalIndex = formData.selectedQuestions.findIndex((q) =>
                   q === questions.easy[slotIndex]
                 );
                 if (globalIndex !== -1) handleRemoveQuestion(globalIndex);
               }}
               onSelectFromBank={(slotIndex) => handleSelectFromBank('easy', slotIndex)}
               regeneratingIndex={null}
+              isGenerating={isGeneratingAll}
             />
 
             <QuestionSection
@@ -459,19 +479,20 @@ export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
               questions={questions.medium}
               expectedType="short_answer"
               onRegenerate={(slotIndex) => {
-                const globalIndex = formData.selectedQuestions.findIndex((q) => 
+                const globalIndex = formData.selectedQuestions.findIndex((q) =>
                   q === questions.medium[slotIndex]
                 );
                 if (globalIndex !== -1) handleRegenerateQuestion(globalIndex);
               }}
               onRemove={(slotIndex) => {
-                const globalIndex = formData.selectedQuestions.findIndex((q) => 
+                const globalIndex = formData.selectedQuestions.findIndex((q) =>
                   q === questions.medium[slotIndex]
                 );
                 if (globalIndex !== -1) handleRemoveQuestion(globalIndex);
               }}
               onSelectFromBank={(slotIndex) => handleSelectFromBank('medium', slotIndex)}
               regeneratingIndex={null}
+              isGenerating={isGeneratingAll}
             />
 
             <QuestionSection
@@ -480,40 +501,45 @@ export const Step2QuestionSelection = memo<Step2QuestionSelectionProps>(
               questions={questions.hard}
               expectedType="code"
               onRegenerate={(slotIndex) => {
-                const globalIndex = formData.selectedQuestions.findIndex((q) => 
+                const globalIndex = formData.selectedQuestions.findIndex((q) =>
                   q === questions.hard[slotIndex]
                 );
                 if (globalIndex !== -1) handleRegenerateQuestion(globalIndex);
               }}
               onRemove={(slotIndex) => {
-                const globalIndex = formData.selectedQuestions.findIndex((q) => 
+                const globalIndex = formData.selectedQuestions.findIndex((q) =>
                   q === questions.hard[slotIndex]
                 );
                 if (globalIndex !== -1) handleRemoveQuestion(globalIndex);
               }}
               onSelectFromBank={(slotIndex) => handleSelectFromBank('hard', slotIndex)}
               regeneratingIndex={null}
+              isGenerating={isGeneratingAll}
             />
             </div>
 
           {errors.questions && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-              <p className="text-sm text-destructive">{errors.questions}</p>
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mt-4">
+              <p className="text-sm text-destructive font-medium">{errors.questions}</p>
             </div>
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onBack}>
-            Back
-          </Button>
-          <Button 
-            onClick={onNext}
-            disabled={!hasAllQuestions}
-          >
-            Next: Set Metadata
-          </Button>
-        </DialogFooter>
+        <div className="px-8 py-5 border-t bg-muted/30">
+          <DialogFooter className="gap-2 sm:gap-3">
+            <Button variant="outline" onClick={onBack} size="lg">
+              Back
+            </Button>
+            <Button
+              onClick={onNext}
+              disabled={!hasAllQuestions}
+              className="min-w-[180px]"
+              size="lg"
+            >
+              Next: Set Metadata
+            </Button>
+          </DialogFooter>
+        </div>
 
         {/* Regenerate Question Modal */}
         <RegenerateQuestionModal

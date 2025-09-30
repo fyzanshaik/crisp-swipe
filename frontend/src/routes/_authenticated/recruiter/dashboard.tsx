@@ -353,7 +353,7 @@ function RecruiterDashboard() {
               <p className="text-sm text-muted-foreground text-center mb-6 max-w-sm">
                 Get started by creating your first interview. It only takes a few minutes to set up.
               </p>
-              <Button size="lg">
+              <Button size="lg" onClick={() => setCreateModal(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Your First Interview
               </Button>

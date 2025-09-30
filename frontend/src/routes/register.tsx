@@ -67,19 +67,19 @@ function Register() {
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Brain className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">Crisp</span>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Get Started</h1>
-          <p className="text-muted-foreground">Create your account today</p>
+          <Link to="/" className="inline-flex items-center justify-center space-x-2 mb-6 hover:opacity-80 transition-opacity">
+            <Brain className="h-10 w-10 text-primary" />
+            <span className="text-3xl font-bold text-foreground">Crisp</span>
+          </Link>
+          <h1 className="text-4xl font-bold text-foreground mb-2">Get Started</h1>
+          <p className="text-lg text-muted-foreground">Create your account and begin your journey</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Register</CardTitle>
-            <CardDescription>
-              Create a new account to start using Crisp
+        <Card className="border-2 shadow-xl">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-2xl">Register</CardTitle>
+            <CardDescription className="text-base">
+              Fill in your details to create an account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -244,9 +244,15 @@ function Register() {
                 )}
               />
             </form>
-            
-            <div className="mt-4 text-center">
-              <Button asChild variant="outline">
+
+            <div className="mt-6 text-center space-y-3">
+              <div className="text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link to="/login" className="text-primary font-semibold hover:underline">
+                  Sign in
+                </Link>
+              </div>
+              <Button asChild variant="ghost" className="w-full">
                 <Link to="/">Back to Home</Link>
               </Button>
             </div>

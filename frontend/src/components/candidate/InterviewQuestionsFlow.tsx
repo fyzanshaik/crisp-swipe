@@ -41,7 +41,7 @@ interface ActiveSession {
 }
 
 export const InterviewQuestionsFlow = memo(function InterviewQuestionsFlow() {
-  const { setCurrentStep } = useInterviewStore();
+  const setCurrentStep = useInterviewStore((state) => state.setCurrentStep);
   const [currentQuestionStartTime, setCurrentQuestionStartTime] = useState<number>(Date.now());
   const [showCompletionMessage, setShowCompletionMessage] = useState(false);
   const [hasShownAutoAdvanceAlert, setHasShownAutoAdvanceAlert] = useState(false);
@@ -204,23 +204,40 @@ export const InterviewQuestionsFlow = memo(function InterviewQuestionsFlow() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <div className="lg:col-span-1">
-        <QuestionTimer
-          timeLimit={currentQuestion.question.timeLimit}
-          onTimeUp={handleTimeUp}
-          questionStartedAt={currentQuestionStartTime}
-        />
+    <div className="space-y-6">
+      <Card className="border-2 border-primary/20">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="text-xl font-bold mb-2">Interview Guidelines</h2>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1">•</span>
+                  <span>Answer each question within the time limit shown on the timer</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1">•</span>
+                  <span>You must spend minimum 50% of the time limit before submitting</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1">•</span>
+                  <span>Questions auto-advance when time expires</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-1">•</span>
+                  <span>Your progress is automatically saved</span>
+                </li>
+              </ul>
+            </div>
 
-        <Card className="mt-4">
-          <CardContent className="p-4">
-            <h4 className="font-medium mb-3">Progress</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Questions</span>
-                <span>{session.currentQuestionIndex + 1} / {session.totalQuestions}</span>
+            <div className="flex flex-col items-end gap-2">
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground">Progress</div>
+                <div className="text-2xl font-bold text-primary">
+                  {session.currentQuestionIndex + 1} / {session.totalQuestions}
+                </div>
               </div>
-              <div className="w-full bg-muted rounded-full h-2">
+              <div className="w-32 bg-secondary rounded-full h-2">
                 <div
                   className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{
@@ -229,44 +246,59 @@ export const InterviewQuestionsFlow = memo(function InterviewQuestionsFlow() {
                 />
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            <div className="mt-4 space-y-2">
-              {session.questions.map((q, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center justify-between text-xs p-2 rounded ${
-                    index === session.currentQuestionIndex
-                      ? 'bg-primary/10 text-primary'
-                      : index < session.currentQuestionIndex
-                        ? 'bg-green-50 text-green-700'
-                        : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  <span>Q{index + 1}: {q.question.type.toUpperCase()}</span>
-                  {index < session.currentQuestionIndex && (
-                    <CheckCircle className="h-3 w-3" />
-                  )}
-                  {index === session.currentQuestionIndex && (
-                    <Badge variant="outline" className="text-xs py-0">
-                      Current
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
+          <QuestionTimer
+            timeLimit={currentQuestion.question.timeLimit}
+            onTimeUp={handleTimeUp}
+            questionStartedAt={currentQuestionStartTime}
+          />
 
-      <div className="lg:col-span-3">
-        <QuestionRenderer
-          question={currentQuestion.question}
-          questionIndex={session.currentQuestionIndex}
-          totalQuestions={session.totalQuestions}
-          points={currentQuestion.points}
-          onSubmit={handleSubmitAnswer}
-          isSubmitting={submitAnswerMutation.isPending}
-        />
+          <Card className="mt-4">
+            <CardContent className="p-4">
+              <h4 className="font-semibold mb-3">Question List</h4>
+              <div className="space-y-2">
+                {session.questions.map((q, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between text-xs p-2.5 rounded border ${
+                      index === session.currentQuestionIndex
+                        ? 'bg-primary/10 border-primary text-primary font-medium'
+                        : index < session.currentQuestionIndex
+                          ? 'bg-card border-green-500/50 text-green-600'
+                          : 'bg-card border-border text-muted-foreground'
+                    }`}
+                  >
+                    <span>Q{index + 1}: {q.question.type.toUpperCase()}</span>
+                    {index < session.currentQuestionIndex && (
+                      <CheckCircle className="h-3.5 w-3.5" />
+                    )}
+                    {index === session.currentQuestionIndex && (
+                      <Badge variant="outline" className="text-xs py-0 border-primary">
+                        Active
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-3">
+          <QuestionRenderer
+            question={currentQuestion.question}
+            questionIndex={session.currentQuestionIndex}
+            totalQuestions={session.totalQuestions}
+            points={currentQuestion.points}
+            onSubmit={handleSubmitAnswer}
+            isSubmitting={submitAnswerMutation.isPending}
+          />
+        </div>
       </div>
     </div>
   );
