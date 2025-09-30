@@ -1,4 +1,9 @@
 import mammoth from "mammoth";
+import { createHash } from "crypto";
+
+export function hashResumeContent(text: string): string {
+  return createHash("sha256").update(text.trim().toLowerCase()).digest("hex");
+}
 
 export async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
   try {

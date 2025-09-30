@@ -1,5 +1,5 @@
 {
-  "id": "243c9947-75f8-480a-8d01-0d3d5de5b1b8",
+  "id": "f9707f8c-a098-4c42-97a2-d9efe897cb00",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -304,6 +304,12 @@
         "evaluated_at": {
           "name": "evaluated_at",
           "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recruiter_notes": {
+          "name": "recruiter_notes",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -667,6 +673,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
         },
         "extracted_name": {
           "name": "extracted_name",

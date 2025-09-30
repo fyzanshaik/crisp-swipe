@@ -39,6 +39,7 @@ CREATE TABLE "interview_sessions" (
 	"percentage" numeric(5, 2),
 	"ai_summary" text,
 	"evaluated_at" timestamp,
+	"recruiter_notes" text,
 	"created_at" timestamp DEFAULT now(),
 	CONSTRAINT "interview_sessions_session_token_unique" UNIQUE("session_token"),
 	CONSTRAINT "interview_sessions_user_id_interview_id_unique" UNIQUE("user_id","interview_id")
@@ -88,6 +89,7 @@ CREATE TABLE "resumes" (
 	"file_name" varchar(255) NOT NULL,
 	"file_type" varchar(50) NOT NULL,
 	"file_size" integer NOT NULL,
+	"content_hash" varchar(64),
 	"extracted_name" varchar(255) NOT NULL,
 	"extracted_email" varchar(255) NOT NULL,
 	"extracted_phone" varchar(20) NOT NULL,

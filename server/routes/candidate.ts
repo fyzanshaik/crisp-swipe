@@ -135,6 +135,31 @@ const candidateRoute = new Hono()
         );
       }
 
+      const { extractTextFromFile, hashResumeContent } = await import("../utils/text-extraction.js");
+      const extractedText = await extractTextFromFile(arrayBuffer, file.type);
+      const contentHash = hashResumeContent(extractedText);
+
+      const duplicateResume = await db.query.resumes.findFirst({
+        where: and(
+          eq(resumes.userId, user.userId),
+          eq(resumes.contentHash, contentHash)
+        ),
+      });
+
+      if (duplicateResume) {
+        const { deleteFile } = await import("../utils/r2.js");
+        await deleteFile(bucketKey);
+
+        return c.json(
+          {
+            error: "Duplicate resume",
+            message: "You have already uploaded this exact resume.",
+            existingResumeId: duplicateResume.id,
+          },
+          400,
+        );
+      }
+
       const hasAllFields =
         extractedData.missing_fields.length === 0 &&
         extractedData.confidence.name > 0.8 &&
@@ -152,6 +177,7 @@ const candidateRoute = new Hono()
           fileName: file.name,
           fileType,
           fileSize: file.size,
+          contentHash,
           extractedName: extractedData.name || "Not found",
           extractedEmail: extractedData.email || "Not found",
           extractedPhone: extractedData.phone || "Not found",

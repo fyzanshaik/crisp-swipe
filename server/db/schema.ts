@@ -26,20 +26,21 @@ export const users = pgTable('users', {
 export const resumes = pgTable('resumes', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  
+
   bucketKey: varchar('bucket_key', { length: 500 }).notNull(),
   fileName: varchar('file_name', { length: 255 }).notNull(),
   fileType: varchar('file_type', { length: 50 }).notNull().$type<'pdf' | 'docx'>(),
   fileSize: integer('file_size').notNull(),
-  
+  contentHash: varchar('content_hash', { length: 64 }),
+
   extractedName: varchar('extracted_name', { length: 255 }).notNull(),
   extractedEmail: varchar('extracted_email', { length: 255 }).notNull(),
   extractedPhone: varchar('extracted_phone', { length: 20 }).notNull(),
-  
+
   verificationMethod: varchar('verification_method', { length: 50 }).notNull().$type<'ai_only' | 'ai_plus_manual' | 'manual_only'>(),
   missingFields: jsonb('missing_fields').$type<string[]>(),
   retryCount: integer('retry_count').default(0),
-  
+
   uploadedAt: timestamp('uploaded_at').defaultNow(),
   verifiedAt: timestamp('verified_at').defaultNow()
 });
