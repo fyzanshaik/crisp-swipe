@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Clock, Copy, Edit, Eye, Trash2, X } from "lucide-react";
+import { Clock, Copy, Edit, Eye, Trash2, X, Users } from "lucide-react";
 import type { Interview } from "./types";
 
 interface InterviewRowProps {
@@ -91,6 +91,14 @@ export const InterviewRow = memo<InterviewRowProps>(({ interview, onAction }) =>
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onAction('candidates', interview)}
+            className="h-8 w-8 p-0"
+          >
+            <Users className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"

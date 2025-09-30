@@ -15,6 +15,7 @@ import {
   ViewInterviewModal,
   EditInterviewModal,
   CreateInterviewModal,
+  CandidatesListModal,
   type Interview,
   type InterviewsData
 } from "@/components/recruiter";
@@ -51,6 +52,11 @@ function RecruiterDashboard() {
   }>({ open: false, interview: null });
 
   const [editModal, setEditModal] = useState<{
+    open: boolean;
+    interview: Interview | null;
+  }>({ open: false, interview: null });
+
+  const [candidatesModal, setCandidatesModal] = useState<{
     open: boolean;
     interview: Interview | null;
   }>({ open: false, interview: null });
@@ -219,6 +225,9 @@ function RecruiterDashboard() {
 
   const handleInterviewAction = async (action: string, interview: Interview) => {
     switch (action) {
+      case 'candidates':
+        setCandidatesModal({ open: true, interview });
+        break;
       case 'view':
         setViewModal({ open: true, interview });
         break;
@@ -412,6 +421,13 @@ function RecruiterDashboard() {
         open={createModal}
         onOpenChange={setCreateModal}
         onInterviewCreated={handleInterviewCreated}
+      />
+
+      <CandidatesListModal
+        open={candidatesModal.open}
+        onOpenChange={() => setCandidatesModal({ open: false, interview: null })}
+        interviewId={candidatesModal.interview?.id || null}
+        interviewTitle={candidatesModal.interview?.title}
       />
     </div>
   );
