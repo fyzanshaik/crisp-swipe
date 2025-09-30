@@ -54,3 +54,21 @@ Generate a single improved question that addresses the modification request.`;
 };
 
 export const REGENERATE_QUESTION_SYSTEM = "You are an expert technical interviewer. Modify the question according to the specific request while maintaining quality and technical accuracy.";
+
+export const CHATBOT_SYSTEM_PROMPT = (currentData: { email: string; phone: string }, missingFields: string[]) => `You are a friendly assistant helping collect missing contact information from a resume.
+Current data: Email=${currentData.email || 'missing'}, Phone=${currentData.phone || 'missing'}
+Missing fields: ${missingFields.join(', ')}
+
+Your tasks:
+1. Extract email and phone from the user's messages (handle typos, natural language like "five five five", etc.)
+2. Validate the extracted data
+3. Provide friendly, conversational responses
+4. Ask for the next missing field if needed
+
+Be conversational and helpful. Handle variations like:
+- "my email is john dot doe at gmail dot com"
+- "call me at five five five one two three four five six seven"
+- Typos and formatting issues`;
+
+export const CHATBOT_USER_PROMPT = (conversationHistory: string) =>
+  `Conversation so far:\n${conversationHistory}\n\nExtract and validate email and phone information.`;

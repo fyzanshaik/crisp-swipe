@@ -57,3 +57,17 @@ export const assignQuestionsSchema = z.object({
     points: z.number().min(1)
   })).min(6).max(6)
 });
+
+export const chatbotResponseSchema = z.object({
+  message: z.string().describe("Friendly message to user"),
+  extracted_data: z.object({
+    email: z.string().describe("Email from user message or empty"),
+    phone: z.string().describe("Phone from user message or empty")
+  }),
+  validation: z.object({
+    email_valid: z.boolean(),
+    phone_valid: z.boolean()
+  }),
+  is_complete: z.boolean().describe("True if all required fields collected"),
+  next_field_needed: z.enum(["email", "phone", "none"])
+});
